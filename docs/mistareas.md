@@ -1,9 +1,5 @@
-Pensaba algo mas como monstruos no personas
+Músiquita en el menu inicial
 
-El mapa de tarjetas puede mejorar bastante
+Hay que bajarle la dificultad aun mas es bastante dificil, o ya luego del primer run poder comprar cosas
 
-El primer nivel es bastante dificil
-
-Pero viene bastante bien
-
-Piezas de los rivales que sean segun su estilo
+Las piezas son muy similares hay que trabajarlas

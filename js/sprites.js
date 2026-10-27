@@ -25,13 +25,40 @@ function line(m, x0, y0, x1, y1, v = 1, th = 1) {
   const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1;
   for (let i = 0; i <= n; i++) rect(m, Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), th, th, v);
 }
-function grid(m, rows) { rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] !== '.') put(m, x, y, +r[x]); }); }
+function grid(m, rows) { rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] !== '.') put(m, x, y, +r[x]); }); }  // '' rows are empty
 
 // mask values: 1 body, 2 dark detail, 4 gold, 7 cork/wood, 8 white glint
 const PIECE_SHAPES = {
-  1(m) { disc(m, 8, 5, 2.7); rect(m, 7, 7, 2, 2); poly(m, [[6, 8], [10, 8], [12.2, 12], [3.8, 12]]); rect(m, 3, 12, 10, 2); },
+  1(m) {  // pawn: the smallest piece, round head
+    grid(m, ['', '', '', '', '',
+      '......1111......',
+      '.....111111.....',
+      '.....111111.....',
+      '......1111......',
+      '.......11.......',
+      '......1111......',
+      '.....111111.....',
+      '....11111111....',
+      '....11111111....']);
+  },
   4(m) { rect(m, 4, 2, 2, 3); rect(m, 7, 2, 2, 3); rect(m, 10, 2, 2, 3); rect(m, 4, 4, 8, 2); rect(m, 5, 6, 6, 5); rect(m, 4, 11, 8, 1); rect(m, 3, 12, 10, 2); },
-  3(m) { ell(m, 8, 6.2, 2.6, 3.8); disc(m, 8, 1.9, 1.1); rect(m, 6, 9, 4, 1); poly(m, [[6, 10], [10, 10], [11.5, 12], [4.5, 12]]); rect(m, 5, 10, 6, 1); rect(m, 3, 12, 10, 2); put(m, 9, 4, 2); put(m, 8, 5, 2); put(m, 7, 6, 2); },
+  3(m) {  // bishop: tall and slim, gold ball, deep diagonal slit, collar
+    grid(m, [
+      '.......44.......',
+      '.......11.......',
+      '......1111......',
+      '.....1111.1.....',
+      '.....111.11.....',
+      '.....11.111.....',
+      '.....111111.....',
+      '......1111......',
+      '.......11.......',
+      '.....222222.....',
+      '......1111......',
+      '.....111111.....',
+      '...1111111111...',
+      '...1111111111...']);
+  },
   5(m) {  // queen: pointed coronet with a gold jewel, slim waist, flared skirt
     grid(m, [
       '................',
@@ -49,7 +76,23 @@ const PIECE_SHAPES = {
       '...1111111111...',
       '...1111111111...']);
   },
-  6(m) { ell(m, 8, 8.2, 4.2, 3); poly(m, [[5, 10], [11, 10], [12, 12], [4, 12]]); rect(m, 3, 12, 10, 2); rect(m, 7, 1, 2, 5, 4); rect(m, 5, 2, 6, 2, 4); },
+  6(m) {  // king: the tallest, big gold cross and a gold belt
+    grid(m, [
+      '.......44.......',
+      '......4444......',
+      '.......44.......',
+      '.......44.......',
+      '.....111111.....',
+      '....11111111....',
+      '....11111111....',
+      '.....111111.....',
+      '......1111......',
+      '.....444444.....',
+      '.....111111.....',
+      '....11111111....',
+      '...1111111111...',
+      '...1111111111...']);
+  },
   2(m) {
     poly(m, [[4.5, 12], [5.2, 9.6], [6.4, 7.6], [5.6, 7.2], [3.4, 9.2], [2.6, 8.4], [2.9, 6.6], [5, 4.2], [6.2, 2.9], [6.4, 1.2], [8.2, 2.6], [10, 2.8], [12.2, 6], [12.8, 9.5], [12, 12]]);
     rect(m, 3, 12, 10, 2); put(m, 6, 5, 2); put(m, 3, 8, 2);
@@ -96,7 +139,7 @@ function toCanvas(shaded, pal) {
 // ---- monster factions: every enemy draws its pieces in its own theme --------
 // The chess silhouette always stays readable; a faction recolors it and adds
 // eyes (9 = accent) plus a few motif pixels (10 = secondary) around it.
-const EYES = { 1: [[7, 5], [9, 5]], 2: [[6, 5]], 3: [[7, 6], [9, 6]], 4: [[6, 8], [9, 8]], 5: [[6, 6], [9, 6]], 6: [[6, 8], [9, 8]] };
+const EYES = { 1: [[6, 6], [9, 6]], 2: [[6, 5]], 3: [[6, 6], [9, 6]], 4: [[6, 8], [9, 8]], 5: [[6, 6], [9, 6]], 6: [[6, 6], [9, 6]] };
 const at = (m, x, y) => x >= 0 && y >= 0 && x < S && y < S ? m[y * S + x] : 0;
 function span(m, y) { let a = -1, b = -1; for (let x = 0; x < S; x++) if (at(m, x, y)) { if (a < 0) a = x; b = x; } return [a, b]; }
 function topRow(m) { for (let y = 0; y < S; y++) if (span(m, y)[0] >= 0) return y; return 0; }
@@ -109,7 +152,7 @@ const FACTIONS = {
   ghost: { color: '#a8b0ff', accent: '#1a1040', mod(m, t) { eyesOn(m, t, 9, true); for (const x of [4, 7, 10]) put(m, x, 13, 0); } },
   spider: { color: '#62507e', accent: '#ff3b3b', second: '#a888c8', mod(m, t) {
     eyesOn(m, t, 9); put(m, 7, 12, 9); put(m, 8, 12, 9);
-    for (const r of [7, 9, 11]) sides(m, r, (x, d) => { add(m, x + d, r, 10); add(m, x + 2 * d, r - 1, 10); add(m, x + 3 * d, r, 10); });
+    for (const r of [11, 13]) sides(m, r, (x, d) => { add(m, x + d, r, 10); add(m, x + 2 * d, r - 1, 10); add(m, x + 3 * d, r, 10); });
   } },
   skeleton: { color: '#9a9aa8', accent: '#ff5a3a', mod(m, t) {
     eyesOn(m, t, 9, true);
@@ -125,19 +168,17 @@ const FACTIONS = {
   werewolf: { color: '#8a6440', accent: '#ffd84a', second: '#5a3e26', mod(m, t) {
     eyesOn(m, t, 9);
     const y0 = topRow(m), [a, b] = span(m, y0); add(m, a, y0 - 1, 1); add(m, b, y0 - 1, 1);
-    const r = EYES[t][0][1]; for (const y of [r + 2, r + 4]) sides(m, y, (x, d) => add(m, x + d, y, 10));
+    for (let y = 12; y <= 13; y++) for (let x = 0; x < S; x++) if (at(m, x, y) === 1 && (x + y) % 3 === 0) put(m, x, y, 10);
   } },
   medusa: { color: '#4fa88a', accent: '#ffd84a', second: '#2f7a3a', mod(m, t) {
     eyesOn(m, t, 9);
     const y0 = topRow(m), [a, b] = span(m, y0); add(m, a - 1, y0 - 1, 10); add(m, b + 1, y0 - 1, 10); add(m, a + 1, y0 - 1, 10); add(m, b - 1, y0 - 1, 10);
-    for (let y = y0; y < y0 + 3; y++) sides(m, y, (x, d) => { if ((y - y0) % 2 === 0) add(m, x + d, y, 10); });
+    for (let x = 4; x <= 11; x += 2) if (at(m, x, 12)) put(m, x, 12, 10);
   } },
   vampire: { color: '#86283e', accent: '#ff5a5a', second: '#2a1220', mod(m, t) {
     eyesOn(m, t, 9);
-    const r = EYES[t][0][1];
-    sides(m, r, (x, d) => { add(m, x + d, r, 10); add(m, x + 2 * d, r, 10); add(m, x + 3 * d, r - 1, 10); });
-    sides(m, r + 1, (x, d) => { add(m, x + d, r + 1, 10); add(m, x + 2 * d, r + 1, 10); add(m, x + 3 * d, r + 1, 10); });
-    sides(m, r + 2, (x, d) => add(m, x + d, r + 2, 10));
+    const [a, b] = span(m, 9); for (let x = a + 1; x < b; x++) if (at(m, x, 9) === 1) put(m, x, 9, 10);
+    for (const y of [11, 12, 13]) sides(m, y, (x, d) => { add(m, x + d, y, 10); if (y === 13) add(m, x + 2 * d, y, 10); });
   } },
   lich: { color: '#4f6890', accent: '#7fffe8', outline: '#0a0a18', glow: 'rgba(127,255,232,0.75)', mod(m, t) { eyesOn(m, t, 9, true); } },
   rival: { color: '#625e80', accent: '#c89aff', mod(m, t) { eyesOn(m, t, 9); } },

@@ -18,7 +18,7 @@ function game(pa, ea, tier) {
   }
   return 'draw';
 }
-const armies = [{ p: 4, n: 0, b: 0, r: 0, q: 0 }, { p: 5, n: 1, b: 0, r: 0, q: 0 }, { p: 6, n: 1, b: 1, r: 1, q: 0 }];
+const armies = [{ p: 5, n: 0, b: 0, r: 0, q: 0 }, { p: 6, n: 1, b: 0, r: 0, q: 0 }, { p: 6, n: 1, b: 1, r: 1, q: 0 }];
 console.log(`proxy player depth ${DEPTH}, ${N} games per cell (win/draw/loss)\n`);
 for (const pa of armies.slice(0, +process.env.ARMIES || 3)) {
   const pv = CS._test.armyValue(pa);

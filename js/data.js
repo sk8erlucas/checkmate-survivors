@@ -7,7 +7,7 @@
 'use strict';
 const D = {};
 
-D.VERSION = '0.3.0';        // shown on the title screen (early alpha)
+D.VERSION = '0.4.0';        // shown on the title screen (early alpha)
 
 D.TYPE = { p: 1, n: 2, b: 3, r: 4, q: 5 };            // chess.js piece types
 D.MAX_ARMY = { p: 8, n: 2, b: 2, r: 2, q: 1 };         // never exceed a standard army
@@ -38,17 +38,17 @@ D.RELICS = {
 
 // difficulty tiers (AI strength, pieces budget relative to the player, reward)
 D.DIFFS = {
-  easy:   { coin: 1.0, depth: 2, blunder: 0.35, timeMs: 150, budget: [0.60, 0], color: '#6fcf7a' },
-  normal: { coin: 1.5, depth: 3, blunder: 0.12, timeMs: 250, budget: [0.9, 1],  color: '#e8c84a' },
-  hard:   { coin: 2.2, depth: 4, blunder: 0.05, timeMs: 350, budget: [1.15, 1], color: '#e0524f' },
-  boss:   { coin: 4.0, depth: 6, blunder: 0.00, timeMs: 700, budget: [1.3, 3],  color: '#b57cff' },
+  easy:   { coin: 1.0, depth: 1, blunder: 0.40, timeMs: 120, budget: [0.50, 0], color: '#6fcf7a' },
+  normal: { coin: 1.5, depth: 2, blunder: 0.20, timeMs: 200, budget: [0.75, 0], color: '#e8c84a' },
+  hard:   { coin: 2.2, depth: 3, blunder: 0.10, timeMs: 300, budget: [0.95, 1], color: '#e0524f' },
+  boss:   { coin: 4.0, depth: 4, blunder: 0.03, timeMs: 500, budget: [1.1, 2],  color: '#b57cff' },
 };
 // the first steps of a run are warm-ups: weaker AI, smaller army, gentle objectives
-D.INTRO = { layers: 2, depth: 1, blunder: 0.5, budget: [0.45, 0] };
+D.INTRO = { layers: 3, depth: 1, blunder: 0.6, budget: [0.4, 0] };
 D.TIMECTRL = {
-  bullet: { base: 40,  inc: 0, mult: 1.4 },
-  blitz:  { base: 75,  inc: 1, mult: 1.15 },
-  rapid:  { base: 130, inc: 2, mult: 1.0 },
+  bullet: { base: 50,  inc: 1, mult: 1.4 },
+  blitz:  { base: 90,  inc: 2, mult: 1.15 },
+  rapid:  { base: 150, inc: 3, mult: 1.0 },
 };
 D.OBJ_N = {   // objective limits by difficulty
   mateIn:       { easy: 30, normal: 24, hard: 20, boss: 24 },
@@ -87,15 +87,15 @@ D.SCENARIOS = [
 
 // permanent upgrades bought with Crowns after a run ends
 D.META = [
-  { id: 'lives',   max: 3, cost: [40, 90, 180],  shape: 'heart' },
-  { id: 'pawn',    max: 3, cost: [30, 60, 100],  shape: 'shield' },
-  { id: 'knight',  max: 1, cost: [120],          shape: 'gem' },
-  { id: 'bishop',  max: 1, cost: [120],          shape: 'gem' },
-  { id: 'rook',    max: 1, cost: [260],          shape: 'gem' },
-  { id: 'slots',   max: 2, cost: [60, 140],      shape: 'bag' },
-  { id: 'bank',    max: 3, cost: [50, 100, 200], shape: 'watch' },
-  { id: 'purse',   max: 3, cost: [40, 90, 160],  shape: 'coin' },
-  { id: 'starter', max: 1, cost: [70],           shape: 'potion' },
+  { id: 'lives',   max: 3, cost: [20, 60, 140],  shape: 'heart' },
+  { id: 'pawn',    max: 3, cost: [15, 40, 80],   shape: 'shield' },
+  { id: 'knight',  max: 1, cost: [60],           shape: 'gem' },
+  { id: 'bishop',  max: 1, cost: [60],           shape: 'gem' },
+  { id: 'rook',    max: 1, cost: [150],          shape: 'gem' },
+  { id: 'slots',   max: 2, cost: [30, 90],       shape: 'bag' },
+  { id: 'bank',    max: 3, cost: [15, 45, 110],  shape: 'watch' },
+  { id: 'purse',   max: 3, cost: [20, 50, 110],  shape: 'coin' },
+  { id: 'starter', max: 1, cost: [25],           shape: 'potion' },
 ];
 
 const api = D;

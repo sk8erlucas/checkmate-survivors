@@ -83,8 +83,8 @@ function setupFEN(pa, ea) {
 // ------------------------------------------------------------------ run state
 const slotsOf = run => 3 + lvl('slots') + (run.relics.includes('pockets') ? 1 : 0);
 function newRun() {
-  const army = { p: 4 + lvl('pawn'), n: lvl('knight') ? 1 : 0, b: lvl('bishop') ? 1 : 0, r: lvl('rook') ? 1 : 0, q: 0 };
-  const run = { army, coins: 15, retries: lvl('lives'), potions: [], relics: [], map: null, cur: null, stats: { nodes: 0, wins: 0 } };
+  const army = { p: 5 + lvl('pawn'), n: lvl('knight') ? 1 : 0, b: lvl('bishop') ? 1 : 0, r: lvl('rook') ? 1 : 0, q: 0 };
+  const run = { army, coins: 20, retries: 1 + lvl('lives'), potions: [], relics: [], map: null, cur: null, stats: { nodes: 0, wins: 0 } };
   if (lvl('starter')) run.potions.push('hourglass', 'rewind');
   run.map = genMap();
   return run;
@@ -107,7 +107,7 @@ const unownedRelics = run => Object.keys(D.RELICS).filter(id => !run.relics.incl
 function randomPotion() { return weighted(Object.keys(D.POTIONS), id => D.POTIONS[id].weight); }
 
 // ------------------------------------------------------------------ map generation
-const DIFF_W = [[100, 0, 0], [75, 25, 0], [45, 45, 10], [30, 50, 20], [20, 45, 35], [15, 45, 40]];
+const DIFF_W = [[100, 0, 0], [85, 15, 0], [60, 35, 5], [40, 45, 15], [25, 50, 25], [20, 45, 35]];
 function pickDiff(layer) {
   const w = DIFF_W[Math.min(layer, 5)];
   return weighted(['easy', 'normal', 'hard'], d => w[['easy', 'normal', 'hard'].indexOf(d)]);
@@ -601,7 +601,8 @@ function showRest(n) {
 function endRun(victory) {
   const run = CS.run, m = CS.meta;
   if (CS.match) { CS.match.destroy(); CS.match = null; }
-  const crowns = run.stats.wins * 3 + (run.stats.nodes - run.stats.wins) + (victory ? 30 : 0) + Math.floor(run.coins / 15);
+  const crowns = 5 + run.stats.wins * 5 + (run.stats.nodes - run.stats.wins) * 2 + (victory ? 40 : 0) + Math.floor(run.coins / 10);
+  const cheapest = Math.min(...D.META.filter(u => lvl(u.id) < u.max).map(u => u.cost[lvl(u.id)]));
   m.crowns += crowns; m.stats.runs++; if (victory) m.stats.wins++;
   m.stats.bestNodes = Math.max(m.stats.bestNodes, run.stats.nodes);
   saveMeta(); CS.run = null; UI.store.saveRun(null);
@@ -613,9 +614,22 @@ function endRun(victory) {
       h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.nodes')), h('b', null, run.stats.nodes)),
       h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.wins')), h('b', null, run.stats.wins)),
       h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.crowns')), h('b', null, '+' + crowns))),
+    m.crowns >= cheapest ? h('p', { class: 'tip' }, T('end.canBuy')) : null,
     h('div', { class: 'menu' }, btn(T('title.shop') + '  (' + m.crowns + ' ' + T('crowns') + ')', showMetaShop, 'primary'), btn(T('end.again'), startRun), btn(T('end.title'), showTitle))));
 }
 
-CS.init = function () { loadMeta(); showTitle(); };
+// Browsers only allow audio after a user gesture: a "click to start" screen
+// unlocks it so the menu music is already playing on the title screen.
+function showSplash() {
+  let done = false;
+  const go = () => { if (done) return; done = true; document.removeEventListener('keydown', go); UI.sfx('click'); showTitle(); };
+  document.addEventListener('keydown', go);
+  UI.screen(h('div', { class: 'screen title splash', onclick: go },
+    h('div', { class: 'logo' }, h('div', { class: 'logo-1' }, 'CHECKMATE'), h('div', { class: 'logo-2' }, 'SURVIVORS')),
+    h('div', { class: 'row center deco' }, ['goblin', 'werewolf', 'medusa', 'skeleton'].map((id, i) => h('img', { class: 'title-monster', style: { animationDelay: (i * 0.2) + 's' }, src: root.Portraits.url(id, 'idle'), alt: '' }))),
+    h('div', { class: 'blink' }, T('title.clickToStart')),
+    h('div', { class: 'version' }, T('title.version', { v: D.VERSION }))));
+}
+CS.init = function () { loadMeta(); if (UI.audioAvailable()) showSplash(); else showTitle(); };
 CS._test = { continueRun, savedRun, genMap, buildEnemyArmy, setupFEN, newRun, armyValue, makeRewards, EVENTS, reachable };
 })(window);

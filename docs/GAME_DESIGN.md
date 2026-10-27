@@ -1,7 +1,7 @@
 # Checkmate Survivors — Documento de diseño
 
 > Roguelite 2D de **ajedrez real** en pixel art. HTML5 + JavaScript puro, pensado para subirse a **itch.io**.
-> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.3.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
+> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.4.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
 
 ---
 
@@ -60,7 +60,9 @@ Cada nodo se conecta con 1–2 del paso siguiente (estilo *Slay the Spire*, en h
 **Tu lado del tablero**: debajo del mapa (y en la tienda) se ve tu ejército ubicado en sus casillas iniciales, el valor del ejército, los espacios de poción (llenos y vacíos) y las reliquias.
 
 ### Inicio amable (calentamiento)
-Con 4 peones ganar por mate es muy difícil, así que los duelos fáciles de los **pasos 1 y 2** son de calentamiento (`D.INTRO`): IA de profundidad 1 con 50% de errores, ejército enemigo de 0.45× el tuyo (≈2 peones), reloj rápido y objetivos simples: **coronar un peón** o **capturar N piezas** (a veces mate). El paso 1 es siempre fácil; el paso 2 es 75% fácil / 25% normal.
+Con pocas piezas ganar por mate es muy difícil, así que los duelos fáciles de los **pasos 1 a 3** son de calentamiento (`D.INTRO`): IA de profundidad 1 con 60% de errores, ejército enemigo de 0.4× el tuyo (≈2 peones), reloj rápido y objetivos simples: **coronar un peón** o **capturar N piezas** (a veces mate).
+
+Probabilidad de dificultad por paso (fácil / normal / difícil): paso 1 100/0/0 · paso 2 85/15/0 · paso 3 60/35/5 · paso 4 40/45/15 · paso 5 25/50/25 · paso 6 20/45/35.
 
 ### Tipos de nodo
 - **Duelo**: batalla completa contra un rival (dificultad fácil/normal/difícil, reloj y objetivo propios). Al ganar: monedas + elegir premio (en *difícil* se eligen **2**).
@@ -71,7 +73,7 @@ Con 4 peones ganar por mate es muy difícil, así que los duelos fáciles de los
 - **Jefe**: al vencerlo se completa el acto y la run termina en victoria.
 
 ### Estado inicial de la run
-Ejército: **4 peones** (+ mejoras permanentes) · 15 monedas · 0 Reintentos (+ mejoras) · 3 espacios de poción (+ mejoras/reliquias).
+Ejército: **5 peones** (+ mejoras permanentes) · 20 monedas · **1 Reintento** (+ mejoras) · 3 espacios de poción (+ mejoras/reliquias).
 
 ### Ejércitos y colocación
 Las piezas se ubican en sus casillas estándar. Peones por orden de centro a bordes (d, e, c, f, b, g, a, h). Caballos g1/b1, alfiles f1/c1, torres h1/a1, dama d1. El rival se arma con un **presupuesto de puntos** proporcional a tu ejército:
@@ -85,11 +87,11 @@ Composición: ~45% del presupuesto en peones y el resto en piezas al azar (nunca
 
 | Tier | IA (profundidad) | Errores* | Presupuesto enemigo | Monedas × | Color |
 |---|---|---|---|---|---|
-| Calentamiento (pasos 1–2) | 1 | 50% | 0.45 × tu ejército | 1.0 | verde |
-| Fácil | 2 | 35% | 0.60 × tu ejército | 1.0 | verde |
-| Normal | 3 | 12% | 0.90 × + 1 | 1.5 | amarillo |
-| Difícil | 4 | 5% | 1.15 × + 1 | 2.2 | rojo |
-| Jefe | 6 | 0% | 1.30 × + 3 | 4.0 | violeta |
+| Calentamiento (pasos 1–3) | 1 | 60% | 0.40 × tu ejército | 1.0 | verde |
+| Fácil | 1 | 40% | 0.50 × tu ejército | 1.0 | verde |
+| Normal | 2 | 20% | 0.75 × tu ejército | 1.5 | amarillo |
+| Difícil | 3 | 10% | 0.95 × + 1 | 2.2 | rojo |
+| Jefe | 4 | 3% | 1.10 × + 2 | 4.0 | violeta |
 
 \* "Errores": probabilidad de que el rival elija una jugada plausible pero no la mejor (nunca una que permita mate en 1).
 En finales con pocas piezas (≤8) la IA busca 1 nivel más profundo, y con ≤4 piezas 2 niveles más (solo rivales de profundidad ≥3).
@@ -97,9 +99,9 @@ En finales con pocas piezas (≤8) la IA busca 1 nivel más profundo, y con ≤4
 ### Relojes
 | Control | Tiempo | Incremento | Monedas × |
 |---|---|---|---|
-| Bullet | 40 s | 0 | 1.4 |
-| Blitz | 75 s | +1 s | 1.15 |
-| Rápida | 130 s | +2 s | 1.0 |
+| Bullet | 50 s | +1 s | 1.4 |
+| Blitz | 90 s | +2 s | 1.15 |
+| Rápida | 150 s | +3 s | 1.0 |
 
 El jugador recibe bonos (Banco de tiempo +5 s por nivel, Reloj de bolsillo +10 s, Amuleto de tempo +1 s de incremento). El rival no.
 
@@ -146,18 +148,20 @@ Algunos rivales pueden **robarte 8 s** (Baron Blitz, Grandmaster Gloom: 1 uso; T
 ## 6. Meta-progresión (Tienda permanente)
 Al terminar una run (ganada, perdida o abandonada) se ganan **Coronas**:
 
-`Coronas = 3 × batallas ganadas + 1 × otros nodos superados + 30 (si se vence al jefe) + ⌊monedas sobrantes / 15⌋`
+`Coronas = 5 (por jugar) + 5 × batallas ganadas + 2 × otros nodos superados + 40 (si se vence al jefe) + ⌊monedas sobrantes / 10⌋`
+
+Objetivo de diseño: **después de la primera run ya se puede comprar algo** (una run corta da ~15–25 Coronas y las primeras mejoras cuestan 15–25). La pantalla de fin de run avisa cuando te alcanza para una mejora.
 
 | Mejora | Niveles | Costo (Coronas) | Efecto |
 |---|---|---|---|
-| Extra Life | 3 | 40 / 90 / 180 | +1 **Reintento** por nivel (reinicia la batalla perdida con los mismos objetos) |
-| Veteran Pawns | 3 | 30 / 60 / 100 | +1 peón inicial por nivel |
-| Knight / Bishop Recruit | 1 c/u | 120 | Empezar con un caballo / alfil |
-| Rook Recruit | 1 | 260 | Empezar con una torre |
-| Deeper Satchel | 2 | 60 / 140 | +1 espacio de poción |
-| Time Bank | 3 | 50 / 100 / 200 | +5 s en tu reloj por nivel |
-| Coin Purse | 3 | 40 / 90 / 160 | +10% monedas por nivel |
-| Alchemist Kit | 1 | 70 | Empezar con Hourglass + Rewind |
+| Extra Life | 3 | 20 / 60 / 140 | +1 **Reintento** por nivel (reinicia la batalla perdida con los mismos objetos) |
+| Veteran Pawns | 3 | 15 / 40 / 80 | +1 peón inicial por nivel |
+| Knight / Bishop Recruit | 1 c/u | 60 | Empezar con un caballo / alfil |
+| Rook Recruit | 1 | 150 | Empezar con una torre |
+| Deeper Satchel | 2 | 30 / 90 | +1 espacio de poción |
+| Time Bank | 3 | 15 / 45 / 110 | +5 s en tu reloj por nivel |
+| Coin Purse | 3 | 20 / 50 / 110 | +10% monedas por nivel |
+| Alchemist Kit | 1 | 25 | Empezar con Hourglass + Rewind |
 
 El progreso se guarda en `localStorage` (clave `checkmate_survivors_v1`).
 
@@ -214,11 +218,20 @@ Smothered King, Back Rank, Knight Fork (fáciles) · Rook Ladder, Queen Hunt, Ho
 ---
 
 ## 8. Arte, sonido e idiomas
-- **Pixel art generado por código** (`js/sprites.js`): siluetas 16×16 → sombreado automático → contorno. Tus piezas marfil; las del rival en el tema de su monstruo (facciones), íconos de nodos, pociones y reliquias. No hay archivos de imagen. La dama tiene corona de puntas con joya dorada, cintura y falda (v0.2) para no confundirse con el rey.
+- **Pixel art generado por código** (`js/sprites.js`): siluetas 16×16 → sombreado automático → contorno. Tus piezas marfil; las del rival en el tema de su monstruo (facciones), íconos de nodos, pociones y reliquias. No hay archivos de imagen.
+- **Siluetas bien distintas (v0.4)**: cada tipo se reconoce por forma y tamaño, aunque todas tengan el mismo color.
+  - **Peón:** la pieza más chica, cabeza redonda.
+  - **Caballo:** cabeza de caballo.
+  - **Alfil:** alto y finito, con bolita dorada y un corte diagonal bien marcado.
+  - **Torre:** almenas.
+  - **Dama:** corona de puntas con joya y cinturón dorados.
+  - **Rey:** la pieza más alta, con una cruz dorada grande y cinturón dorado.
+
+  Los adornos de facción (patas, capa, caldero, costillas...) van en la mitad inferior o en la base, para no tapar la parte que identifica a la pieza.
 - **Retratos de rivales** (`js/portraits.js`): monstruos 32×32 (cuerpo propio o cabeza compartida + rasgos), 6 expresiones (normal, parpadeo, pensando, contento, dolor, KO).
 - **Tarjetas** (premios, tienda, tienda permanente): franja y etiqueta de color según tipo (pieza, poción, reliquia, monedas, mejora), ícono sobre un halo y efecto al pasar el mouse.
 - **Sonido**: efectos sintetizados con WebAudio (sin archivos): golpe al comer, "muerte" con ruido y caída de tono para piezas de 5+ y el mate, quejido cuando te comen, enroque, fanfarria de coronación, jaque.
-- **Música** chiptune procedural (secuenciador propio en `ui.js`, sin archivos): tema del **menú** (La menor, tranquilo y misterioso), tema de **batalla** (Re menor, con batería) y tema del **jefe** (frigio, más rápido). Se activa con el primer clic (requisito de los navegadores). Botones *Sonido* y *Música* en el menú.
+- **Música** chiptune procedural (secuenciador propio en `ui.js`, sin archivos): tema del **menú** (La menor, tranquilo y misterioso), tema de **batalla** (Re menor, con batería) y tema del **jefe** (frigio, más rápido). Al abrir el juego aparece una pantalla **"Hacé clic para empezar"**: los navegadores no reproducen audio sin un gesto del usuario, y ese clic habilita la música, que ya suena en el menú principal. Botones *Sonido* y *Música* en el menú.
 - **Idiomas**: inglés (por defecto) y español. **Todo el texto** vive en `js/i18n.js`; `tests/i18n.js` verifica que cada clave exista en ambos idiomas. Para agregar un idioma: copiar el bloque `DICT.es`, traducir y sumar el botón del menú.
 
 ---
@@ -244,6 +257,8 @@ checkmate-survivors/
 ├─ tests/                perft, ai, scenarios, i18n, smoke, balance
 ├─ docs/GAME_DESIGN.md   este documento
 ├─ dist/                 .zip listo para itch.io
+├─ marketing/            portada, capturas y textos para la página de itch.io
+├─ AGENTS.md             guía para agentes de IA que trabajen en el código
 └─ package-itch.ps1      genera el .zip en Windows
 ```
 
@@ -260,32 +275,97 @@ checkmate-survivors/
 ---
 
 ## 10. Publicar en itch.io
-1. Ejecutar `package-itch.ps1` (o usar `dist/checkmate-survivors-html5.zip`, ya generado). El zip contiene `index.html` en la raíz + `css/` + `js/`.
+Todo el material está en **`marketing/`**:
+- `marketing/ITCH_PAGE.md`: qué poner en cada campo del formulario de itch.io (título, tagline, tags, viewport, orden de capturas), la descripción en inglés y en español, y un texto para el devlog de lanzamiento.
+- `marketing/cover.png`: portada de 630×500.
+- `marketing/screenshots/`: capturas de 1280×720 tomadas del juego real (título, mapa, captura de dama contra la araña, jefe, coronación contra la bruja, tienda y mejoras).
+
+Pasos:
+1. Ejecutar `package-itch.ps1` (o usar `dist/checkmate-survivors-html5.zip`, ya generado). El zip contiene `index.html` en la raíz + `css/` + `js/` (no incluye `marketing/` ni `docs/`).
 2. En itch.io: *Create new project* → *Kind of project*: **HTML**.
 3. Subir el zip y marcar **"This file will be played in the browser"**.
-4. *Embed options*: viewport recomendado **1100 × 720** (o "Automatically start on page load" + botón de pantalla completa).
+4. *Embed options*: viewport **1280 × 760**, botón de pantalla completa, "Automatically start on page load" (el juego tiene su propia pantalla de "clic para empezar").
 5. Opcional: `butler push dist/checkmate-survivors-html5.zip usuario/checkmate-survivors:html5` para actualizar rápido.
+
+Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge headless (ver `AGENTS.md`).
 
 ---
 
-## 11. Estado (v0.3.0 · Early Alpha) y hoja de ruta
+## 11. Estado (v0.4.0 · Early Alpha) y hoja de ruta
 
 **Hecho:** motor completo, IA con 6 estilos, mapa ramificado, 4 tipos de objetivo, relojes, 6 pociones, 7 reliquias, 5 eventos, tienda, fogata, jefe, 10 puzzles, tienda permanente, guardado, EN/ES, sonido.
 **v0.2:** retratos animados de rivales con barra de vida, daño, reacciones y frases; nueva dama; tarjetas rediseñadas; guardar/continuar run.
 **v0.3.0:** rivales monstruo con piezas temáticas por facción; inicio de calentamiento con objetivos *coronar* y *capturar N*; mapa rediseñado; panel "tu lado del tablero"; música y sonidos de golpe/muerte; animaciones de captura, jaque, enroque, coronación y mate; frases para dama perdida, coronación y jaque; versión en el menú.
+**v0.4.0:** dificultad bastante más baja (IA menos profunda, ejércitos enemigos más chicos, más tiempo, 5 peones y 1 Reintento al empezar, calentamiento de 3 pasos); tienda permanente más barata y más Coronas por run; siluetas de piezas rediseñadas; pantalla "clic para empezar" para que suene la música del menú; kit de itch.io (`marketing/`); `AGENTS.md`.
 
 **Pendiente / ideas (por prioridad):**
-1. **Probar en navegador real y ajustar UI** (el prototipo se validó en un DOM simulado; falta revisión visual/táctil fina).
-2. **Balance**: afinar presupuestos, tiempos y recompensas con partidas humanas (`data.js → DIFFS / TIMECTRL / OBJ_N`).
-3. Actos 2 y 3 (más rivales, jefes con tiempos y aperturas propias, siempre dentro de las reglas).
-4. Más puzzles (mate en 3–4, finales de peones, tácticas) y packs diarios con semilla fija.
-5. Una pieza "estrella" por monstruo con efecto visual propio (p. ej. la dama araña deja telaraña al moverse), temas musicales por rival, más eventos con monstruos.
-6. Mejoras de IA: libro de aperturas corto, mejor manejo de finales de peones.
-7. Logros, estadísticas y modo "desafío diario".
-8. Pulido móvil (tablero táctil, layouts verticales).
+1. **Balance con partidas humanas**: confirmar que el paso 1–3 se siente fácil y que el jefe sigue siendo un desafío (ver sección 12).
+2. **Rasgos de monstruo** (sección 13): cada rival con una mecánica propia de reloj/objetos, sin tocar las reglas.
+3. **Actos 2 y 3** (sección 14).
+4. Eventos con monstruos y más puzzles (mate en 3–4, finales de peones, tácticas).
+5. Desafío diario con semilla fija, logros y estadísticas (sección 15).
+6. Opciones: reducir animaciones, piezas enemigas "clásicas", tamaño de tablero (sección 16).
+7. Pulido móvil (tablero táctil, layouts verticales).
+8. Mejoras de IA: libro de aperturas corto, mejor manejo de finales de peones.
 
 **Preguntas abiertas para el autor**
 - ¿El triple empate/50 jugadas debe contar como derrota o dar un premio de consuelo?
 - ¿Querés que el jugador pueda jugar con negras en algunos duelos?
 - ¿Cuántos actos y qué duración objetivo de run (hoy ~25–30 min)?
 - ¿Monetización/estilo de publicación (gratis con donaciones en itch.io, premium)?
+
+---
+
+## 12. Curva de dificultad (v0.4)
+El autor reportó dos veces que el comienzo era difícil. Diagnóstico: con 4 peones y sin piezas, ganar **por mate** contra el reloj exige coronar y después dar mate, algo muy exigente para alguien que no juega ajedrez seguido. Medidas:
+- **Objetivos de calentamiento** (coronar / capturar N) en los primeros pasos: se ganan sin necesidad de dar mate.
+- **Rivales débiles al principio**: profundidad 1 y muchos errores. A partir del paso 4 aparecen los normales con frecuencia.
+- **Más margen**: 5 peones, 1 Reintento gratis y relojes más largos con incremento.
+- **Progresión desde la primera run**: mejoras de 15–25 Coronas y unas 15–25 Coronas por run corta.
+
+Simulación (`tests/balance.js`, jugador proxy de profundidad 2, ejército inicial de 5 peones, 8 partidas por fila):
+
+| Rival | Victorias / tablas / derrotas |
+|---|---|
+| Fácil | 8 / 0 / 0 |
+| Normal | 7 / 1 / 0 |
+| Difícil | 0 / 2 / 6 |
+| Jefe | 0 / 0 / 8 |
+
+Los difíciles y el jefe se enfrentan más tarde, con un ejército más grande; con 5 peones solos se espera perder. **Próximo paso:** registrar en partidas reales en qué paso termina cada run (se puede guardar en `meta.stats`) y ajustar con datos.
+
+## 13. Rasgos de monstruo (propuesta para v0.5)
+Cada monstruo suma **un rasgo** que no cambia las reglas del ajedrez. Actúa sobre el reloj, los objetos o la economía de la run, se muestra en el detalle del nodo y tiene su propia animación en el retrato.
+
+| Monstruo | Rasgo | Efecto |
+|---|---|---|
+| Gloop el Slime | *Pegajoso* | Ninguno: es el rival de aprendizaje. |
+| Grabby el Goblin | *Ladronzuelo* | Cada pieza que te come te roba 2 monedas, que recuperás todas si le ganás. |
+| Buu el Fantasma | *Escurridizo* | Su reloj no corre durante sus 3 primeras jugadas. |
+| La Viuda Tejedora | *Telaraña* | Cuando movés una pieza que ella ataca, perdés 1 s. La pieza "estrella" (su dama) deja un rastro de telaraña visual al moverse. |
+| Sir Huesos | *Inquebrantable* | Empieza con +1 peón. Si le ganás, te da un premio extra. |
+| Hexa la Bruja | *Brebaje* | Una vez por partida usa una poción de "Atalaya" a su favor: se muestran tus piezas colgadas en rojo durante 1 turno, como aviso. |
+| Colmillo el Lobizón | *Luna llena* | Cuando tiene menos de la mitad de la vida, su IA pasa al estilo agresivo extremo. |
+| Medusa | *Mirada pétrea* | Una vez por partida congela tu reloj... al revés: el tuyo corre al doble durante 1 jugada. |
+| Conde Vlastor | *Drenaje* | Además del robo de tiempo, recupera 2 s cada vez que te come una pieza. |
+| El Liche del Reloj | *Fases* | Al perder la dama entra en la fase 2: música más rápida, aura roja y un robo de tiempo extra. |
+
+## 14. Actos 2 y 3 (propuesta)
+- **Acto 1, El Bosque Embrujado** (actual): slime, goblin, fantasma, araña, esqueleto, bruja, lobizón, medusa, vampiro. Jefe: el Liche del Reloj.
+- **Acto 2, Las Catacumbas**: momia (defensiva, venda tus piezas: efecto visual), gólem de piedra (lento, posicional; su reloj tiene +30 s pero sin incremento), banshee (grita: −3 s a tu reloj en cada jaque que te da), murciélago gigante, rata reina. Jefe: **el Nigromante**, que juega con el ejército de los jefes anteriores (otra paleta).
+- **Acto 3, El Castillo**: gárgola, dragón joven, caballero sin cabeza (solo caballos y torres: composición de ejército temática), súcubo, kraken del foso. Jefe final: **el Rey Sombra**, que empieza con el ejército completo; vos llegás con lo que juntaste.
+- Cada acto suma un paso al mapa y su propia paleta de fondo y tema musical. Entre actos, una **fogata grande**: curar 1 Reintento + elegir una reliquia de 3.
+- **Composición temática de ejércitos** (sin salir del máximo estándar): algunos monstruos prefieren ciertas piezas. El caballero sin cabeza tiene caballos, el gólem torres y la bruja alfiles.
+
+## 15. Desafío diario, logros y estadísticas
+- **Desafío diario**: semilla fija por fecha (mapa, rivales y premios iguales para todos). Un intento por día y un puntaje = nodos × 10 + victorias × 25 + tiempo restante promedio. Tabla local de los últimos 7 días.
+- **Logros** (locales, se muestran en el menú): "Primera sangre" (primera captura), "Coronación" (coronar un peón), "Sin pociones" (ganar una run sin usarlas), "Bullet master" (ganar 3 batallas bullet en una run), "Cazador de monstruos" (vencer a los 10), "El tiempo es mío" (robarle 30 s al rival en una partida).
+- **Estadísticas**: paso donde termina cada run, rival que más te venció, piezas comidas por tipo. Además sirven para balancear (sección 12).
+
+## 16. Opciones y accesibilidad (propuesta)
+- **Reducir animaciones**: sin temblor de tablero ni destellos; partículas mínimas.
+- **Piezas enemigas clásicas**: usar el set carmesí en vez de las facciones, para quien prefiera claridad total.
+- **Volumen** separado de música y efectos (hoy son interruptores).
+- **Tamaño de tablero / modo vertical** para pantallas chicas.
+- **Coordenadas siempre visibles** y opción de mostrar la última jugada con flecha.
+

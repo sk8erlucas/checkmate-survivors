@@ -5,6 +5,8 @@ Roguelite de **ajedrez real** en pixel art (HTML5). Empezás con un rey y pocos 
 - **Jugar:** abrí `index.html` con doble clic (no necesita servidor ni instalación).
 - **Diseño completo:** [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)
 - **Tests:** `node tests/perft.js`, `node tests/ai.js`, `node tests/scenarios.js`, `node tests/i18n.js`, `node tests/smoke.js`, `node tests/balance.js`
+- **Página de itch.io:** portada, capturas y textos en [`marketing/`](marketing/ITCH_PAGE.md).
+- **Para agentes de IA:** [`AGENTS.md`](AGENTS.md).
 - **Subir a itch.io:** ejecutá `package-itch.ps1` (genera `dist/checkmate-survivors-html5.zip`) y subilo como proyecto *HTML* marcando "played in the browser".
 
 Idioma por defecto: inglés (selector de español en el menú). Sin dependencias.

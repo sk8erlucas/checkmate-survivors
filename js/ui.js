@@ -49,6 +49,7 @@ UI.toast = function (msg, kind) {
 // the music is a tiny step sequencer playing the tracks defined below.
 let actx = null, noiseBuf = null;
 UI.muted = false; UI.musicOn = true;
+UI.audioAvailable = () => !!(root.AudioContext || root.webkitAudioContext);
 function ac() {
   if (actx) return actx;
   const AC = root.AudioContext || root.webkitAudioContext;
@@ -132,7 +133,7 @@ function playStep(tr, i, t, sd) {
     if (st % 2 === 0) tone(hz(ch[1 + (st / 2) % 3] + 12), sd * 1.5, 'triangle', 0.025, t);
   }
   const mel = tr.melody[bar % tr.melody.length];
-  for (const [s, n, len] of mel) if (s === st) tone(hz(n), sd * len * 0.92, 'square', 0.028, t);
+  for (const [s, n, len] of mel) if (s === st) tone(hz(n), sd * len * 0.92, 'square', 0.036, t);
 }
 function pump() {
   const a = actx, tr = TRACKS[mus.name];
