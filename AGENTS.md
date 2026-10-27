@@ -9,6 +9,7 @@ Guidance for AI coding agents working on **Checkmate Survivors**, a chess roguel
 - **Every player-facing string goes in `js/i18n.js`**, in both `DICT.en` and `DICT.es`, with matching `{placeholders}`. English is the default. The author writes Spanish in the rioplatense register (voseo: "tenés", "elegí").
 - **Opponents are monsters, not people.** Each has a portrait, a themed piece faction and lines for 8 moments.
 - **Enemy pieces must never look like the player's ivory pieces**, and every piece type must stay recognizable by its silhouette (pawn small, bishop slit, king cross, queen coronet). Faction decoration goes mostly on the lower body or base.
+- **No separate game modes.** New ideas go into the main run, usually as a map node (Mate Rush is a bonus node).
 - Don't commit, push or tag unless asked. Don't edit `docs/mistareas.md`: it's the author's personal task list. Read it for pending wishes.
 
 ## Layout
@@ -24,7 +25,7 @@ js/i18n.js          all text (EN/ES)
 js/ui.js            DOM helper h(), screens, toasts, storage (meta + saved run), SFX and the music sequencer
 js/match.js         one battle: Avatar (opponent widget), board drawing + effects, clocks, objectives, potions
 js/run.js           the run: map generation and drawing, nodes, rewards, shop, events, rest, meta shop, save/continue
-js/rush.js          Mate Rush quick mode: random mate-in-one generator + 3-minute timer (reuses Match)
+js/rush.js          Mate Rush bonus node: random mate-in-one generator + 60 s timer, pays coins per mate (reuses Match)
 tests/              node scripts (see below)
 marketing/          itch.io cover, screenshots and page text (ITCH_PAGE.md)
 dist/               the zip uploaded to itch.io

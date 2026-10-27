@@ -59,8 +59,9 @@ function structural() {
     for (let l = 1; l < 8; l++) for (let j = 0; j < L[l].length; j++) if (!L[l - 1].some(a => a.next.includes(j))) { fail++; console.log('FAIL node without entrance', l, j); return; }
     if (!L[3].some(n => n.type === 'shop') || !L[3].some(n => n.type === 'rest')) { fail++; console.log('FAIL layer 3 needs shop+rest'); return; }
     if (L[7][0].type !== 'boss') { fail++; console.log('FAIL boss'); return; }
+    if (!L[2].some(n => n.type === 'rush')) { fail++; console.log('FAIL step 3 needs a Mate Rush'); return; }
   }
-  ok(true, '300 random maps: every node has entrance/exit, shop+rest at step 4, boss at the end');
+  ok(true, '300 random maps: every node has entrance/exit, a Mate Rush at step 3, shop+rest at step 4, boss at the end');
   let bad = 0;
   for (let pts = 1; pts <= 60; pts++) for (let q = 0; q < 2; q++) {
     const a = CS._test.buildEnemyArmy(pts, !!q);
@@ -152,6 +153,11 @@ async function fullRun(first) {
       if (m.result.win) { findBtn('Continue').click(); if (node.type === 'boss') { await sleep(10); ended = true; break; } await claimRewards(); }
       else if (findBtn('Retry battle')) { findBtn('Retry battle').click(); await sleep(20); m.destroy(); const m2 = CS.match; ok(m2 && m2 !== m, 'retry restarts the battle'); m2.begin(); m2.finish({ win: true, reason: 'mate' }); await waitFor(() => findBtn('Continue'), 3000); findBtn('Continue').click(); await claimRewards(); }
       else { findBtn('End run').click(); ended = true; }
+    } else if (node.type === 'rush') {
+      const R = ctx.Rush; await waitFor(() => R.state.match, 3000, 'rush match'); const rm = R.state.match;
+      rm.playerMove(rm.legalMoves.find(x => { rm.pos.make(x); const st = rm.pos.gameStatus(); rm.pos.unmake(); return st.result === 'checkmate'; }));
+      await waitFor(() => R.state.score === 1, 3000, 'rush mate'); const c0 = CS.run.coins; findBtn('Stop').click();
+      ok(CS.run.coins > c0 && pageText().includes('MATE RUSH'), 'Mate Rush node pays coins in the run'); findBtn('Continue').click();
     } else if (node.type === 'shop') {
       CS.run.coins = 400;
       const r0 = buttons().find(b => b.className.includes('reroll')); const c0 = CS.run.coins; r0.click();
@@ -237,9 +243,9 @@ async function rushMode() {
     if (!mates.length || pos.inCheck(1) || pos.inCheck(0)) bad++;
   }
   ok(bad === 0, 'Mate Rush generator: 48 random puzzles, all legal with a mate in one');
-  const crowns0 = CS.meta.crowns;
-  R.start(); await sleep(10);
-  let m = CS.match || R.state.match; ok(!!m && pageText().includes('MATE RUSH'), 'Mate Rush starts with a puzzle on the board');
+  let done = null;
+  R.start({ level: 0, perMate: 5, onDone: (score, coins) => { done = { score, coins }; } }); await sleep(10);
+  let m = R.state.match; ok(!!m && pageText().includes('MATE RUSH'), 'Mate Rush bonus starts with a puzzle on the board');
   const mate = m.legalMoves.find(x => { m.pos.make(x); const st = m.pos.gameStatus(); m.pos.unmake(); return st.result === 'checkmate'; });
   m.playerMove(mate); await waitFor(() => R.state.score === 1, 3000, 'rush score');
   ok(R.state.score === 1, 'solving a mate scores a point and loads the next puzzle');
@@ -247,10 +253,10 @@ async function rushMode() {
   const wrong = m.legalMoves.find(x => { m.pos.make(x); const st = m.pos.gameStatus(); m.pos.unmake(); return !st.over; });
   m.playerMove(wrong); await waitFor(() => R.state.left < left - 9000, 3000, 'rush penalty');
   ok(R.state.score === 1, 'a wrong move costs 10 seconds');
-  R.finish(); ok(CS.meta.crowns > crowns0 && CS.meta.stats.rushBest === 1 && pageText().includes("TIME'S UP"), 'finishing Mate Rush pays Crowns and saves the best score');
+  R.finish(); ok(done && done.score === 1 && done.coins === 5, 'finishing Mate Rush pays coins per mate');
 }
 (async () => {
-  try { structural(); await objectives(); await rushMode(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
+  try { structural(); await objectives(); await rushMode(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
   console.log(fail ? `\n${fail} FAILURES` : '\nALL SMOKE TESTS PASSED');
   process.exit(fail ? 1 : 0);
 })();

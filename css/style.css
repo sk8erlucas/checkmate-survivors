@@ -241,9 +241,9 @@ h3.section { margin-top: 18px; color: var(--gold); letter-spacing: 2px; text-tra
 /* Mate Rush */
 .rush-bar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 10px; border-color: #e0524f; }
 .rush-title { font-size: 22px; font-weight: 900; letter-spacing: 3px; color: #ff7a6a; text-shadow: 2px 2px 0 #3a0f18; }
-.rush-score { font-size: 20px; } .rush-score b { color: var(--gold); font-size: 26px; }
+.rush-score { display: flex; align-items: center; gap: 4px; font-size: 20px; } .rush-score b { color: var(--gold); font-size: 26px; }
+h1.rush-title { font-size: 36px; }
 .rush .bar .clock { visibility: hidden; }
-.btn.rush-btn { background: #6b2530; border-color: #ff7a6a; } .btn.rush-btn:hover:not(:disabled) { background: #85303d; }
 
 @media (max-width: 640px) {   /* phones only: wider windows are zoomed to fit by UI.fit */
   .avatar-stage { height: 130px; } .portrait { width: 96px; height: 96px; }

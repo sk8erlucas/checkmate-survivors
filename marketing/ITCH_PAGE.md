@@ -15,7 +15,7 @@ Everything you need to fill in the itch.io "Create new project" form. Copy each 
 | **Short description or tagline** | Real chess, roguelite runs, and a cast of monsters. Start with a king and a few pawns, and survive. |
 | **Classification** | Games |
 | **Kind of project** | HTML |
-| **Release status** | In development (early alpha, v0.6.0) |
+| **Release status** | In development (early alpha, v0.7.0) |
 | **Pricing** | No payments (or "Donate" if you want tips) |
 | **Uploads** | `dist/checkmate-survivors-html5.zip`, and tick **"This file will be played in the browser"** |
 | **Viewport dimensions** | 1280 × 760 recommended. Smaller embeds work too: the game zooms itself out to fit. Tick **Fullscreen button** (there is also an in-game Fullscreen button). Leave "Mobile friendly" off for now. |
@@ -51,7 +51,7 @@ The rules of chess never change: real moves, castling, en passant and promotion.
 - **The clock is a resource.** Bullet, blitz or rapid battles; potions that add time, freeze the enemy clock or steal seconds, and monsters that steal them back.
 - **Varied objectives**: checkmate, mate in N, survive N moves, capture the queen, capture N pieces or promote a pawn.
 - **Puzzles**: 15 hand-made positions, every one verified solvable. The first steps of a run are mostly puzzles, a quick way in.
-- **Mate Rush mode**: 3 minutes, endless random mate-in-one puzzles, each wrong move costs 10 seconds. Beat your best score and earn Crowns.
+- **Mate Rush bonus nodes**: 60 seconds of random mate-in-one puzzles on the map. Every mate pays coins, every wrong move costs 10 seconds.
 - **Potions and amulets**: rewind, oracle hints, threat vision, time thief, and more. Reroll the shop when you don't like the offer (the first reroll is free).
 - **Permanent upgrades and an amulet collection**: earn Crowns every run, unlock lives, extra pawns and starting pieces, and buy amulets once to start every run with them.
 - **A gentle start**: the first steps are warm-up battles against weak monsters with simple goals.
@@ -89,7 +89,7 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 - **El reloj es un recurso**: batallas bullet, blitz o rápidas; pociones que suman tiempo, congelan el reloj rival o roban segundos, y monstruos que te los roban a vos.
 - **Objetivos variados**: mate, mate en N, sobrevivir, capturar la dama, capturar N piezas o coronar un peón.
 - **15 puzzles** hechos a mano y verificados; los primeros pasos de la run son mayormente puzzles.
-- **Modo Mate Rush**: 3 minutos de mates en 1 generados al azar; cada error cuesta 10 segundos. Superá tu récord y ganá Coronas.
+- **Nodos bonus Mate Rush**: 60 segundos de mates en 1 generados al azar dentro del mapa. Cada mate da monedas y cada error cuesta 10 segundos.
 - **Mejoras permanentes y colección de amuletos** con Coronas: vidas, peones extra, piezas iniciales, y amuletos que se compran una vez y te acompañan en todas las runs.
 - **Inicio amable**: los primeros pasos son batallas de calentamiento.
 - **Guardado automático** y **música chiptune** generada en el navegador.
@@ -101,7 +101,9 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 
 ## Devlog post (optional, for launch)
 
-> **Checkmate Survivors v0.6.0 is out!** A new quick mode, **Mate Rush**: 3 minutes of random mate-in-one puzzles. Runs now open with puzzles, battles pay more coins, and you can reroll your rewards.
+> **Checkmate Survivors v0.7.0 is out!** Mate Rush is now a bonus node on the map: 60 seconds of mates in one, and every mate pays coins.
+
+> *(v0.6.0)* **Checkmate Survivors v0.6.0 is out!** A new quick mode, **Mate Rush**: 3 minutes of random mate-in-one puzzles. Runs now open with puzzles, battles pay more coins, and you can reroll your rewards.
 
 > *(v0.5.0)* **Checkmate Survivors v0.5.0 is out!** Monster traits, a permanent amulet collection, shop rerolls, calmer music in long games and a game that fits any window.
 

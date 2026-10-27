@@ -7,7 +7,7 @@
 'use strict';
 const D = {};
 
-D.VERSION = '0.6.0';        // shown on the title screen (early alpha)
+D.VERSION = '0.7.0';        // shown on the title screen (early alpha)
 
 D.TYPE = { p: 1, n: 2, b: 3, r: 4, q: 5 };            // chess.js piece types
 D.MAX_ARMY = { p: 8, n: 2, b: 2, r: 2, q: 1 };         // never exceed a standard army

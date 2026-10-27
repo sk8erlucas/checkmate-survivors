@@ -120,7 +120,7 @@ const OBJ_W = {
   hard:   { mate: 55, mateIn: 15, survive: 15, captureQueen: 15 },
 };
 // the first steps are mostly puzzles: a quick, rewarding way into the game
-const PUZZLE_FIRST = [{ duel: 20, scenario: 80 }, { duel: 25, scenario: 50, event: 15, shop: 5, rest: 5 }];
+const PUZZLE_FIRST = [{ duel: 20, scenario: 80 }, { duel: 25, scenario: 40, event: 15, shop: 5, rest: 5, rush: 10 }];
 function genMap() {
   const widths = [3, 2 + rnd(2), 3, 3, 2 + rnd(2), 2, 2, 1];
   const layers = widths.map((w, l) => Array.from({ length: w }, (_, i) => ({ id: l + '-' + i, layer: l, idx: i, next: [], done: false })));
@@ -130,8 +130,9 @@ function genMap() {
     if (l === 7) types = ['boss'];
     else if (l === 6) types = shuffle(['rest', 'shop']);
     else if (l === 3) types = shuffle(['shop', 'rest', 'duel']);
-    else types = nodes.map(() => weighted(l === 0 ? ['duel', 'scenario'] : ['duel', 'scenario', 'event', 'shop', 'rest'],
-      t => (PUZZLE_FIRST[l] || { duel: 55, scenario: 16, event: 18, shop: 6, rest: 7 })[t]));
+    else types = nodes.map(() => weighted(l === 0 ? ['duel', 'scenario'] : ['duel', 'scenario', 'event', 'shop', 'rest', 'rush'],
+      t => (PUZZLE_FIRST[l] || { duel: 50, scenario: 14, event: 16, shop: 6, rest: 6, rush: 8 })[t] || 0));
+    if (l === 2 && !types.includes('rush')) types[rnd(types.length)] = 'rush';   // every run gets at least one Mate Rush
     nodes.forEach((n, i) => {
       n.type = types[i];
       if (n.type === 'duel') {
@@ -243,7 +244,7 @@ function priceBtn(price, can, onclick, crowns) {
     can ? null : h('span', { class: 'need' }, T('shop.need')));
 }
 const portrait = (id, cls) => h('img', { class: cls, src: root.Portraits.url(id, 'idle'), alt: '' });
-const NODE_COLOR = { scenario: '#7ac0f0', shop: '#e8b84a', event: '#c58cff', rest: '#ff9f5a', boss: '#b57cff' };
+const NODE_COLOR = { rush: '#ff7a6a', scenario: '#7ac0f0', shop: '#e8b84a', event: '#c58cff', rest: '#ff9f5a', boss: '#b57cff' };
 const nodeColor = n => (n.type === 'duel' || n.type === 'scenario') ? D.DIFFS[n.diff].color : NODE_COLOR[n.type];
 function objN(type, diff) { return D.OBJ_N[type] ? D.OBJ_N[type][diff] : 0; }
 
@@ -276,7 +277,6 @@ function showTitle() {
     h('div', { class: 'menu' },
       saved ? btn(T('title.continue'), continueRun, 'primary') : null,
       btn(T('title.start'), startRunConfirm, saved ? '' : 'primary'),
-      btn(T('title.rush'), () => root.Rush.start(), 'rush-btn'),
       btn(T('title.shop') + '  (' + m.crowns + ' ' + T('crowns') + ')', showMetaShop),
       btn(T('title.how'), showHelp),
       h('div', { class: 'row center' },
@@ -341,7 +341,7 @@ function nodeEl(n, reach) {
       n.tc && n.type !== 'boss' ? h('span', { class: 'ntc' }, T('tc.' + n.tc)) : null) : null);
 }
 function legend() {
-  const items = [['duel', '#e8c84a'], ['scenario', NODE_COLOR.scenario], ['shop', NODE_COLOR.shop], ['event', NODE_COLOR.event], ['rest', NODE_COLOR.rest], ['boss', NODE_COLOR.boss]];
+  const items = [['duel', '#e8c84a'], ['scenario', NODE_COLOR.scenario], ['rush', NODE_COLOR.rush], ['shop', NODE_COLOR.shop], ['event', NODE_COLOR.event], ['rest', NODE_COLOR.rest], ['boss', NODE_COLOR.boss]];
   return h('div', { class: 'legend' }, items.map(([t, c]) => h('span', { class: 'legend-item' }, icon(t, c, null, 'chip'), T('node.' + t))));
 }
 // "your side of the board": army on its starting squares, potion slots and relics
@@ -418,6 +418,9 @@ function openNode(n) {
     row(T('match.objective'), T('obj.' + n.objType, { n: objN(n.objType, n.diff) }));
     row(T('match.time'), tc.base + 's' + (tc.inc ? ' +' + tc.inc + 's' : '') + '  (' + T('tc.' + n.tc) + ')');
     row(T('node.reward'), '~' + coinReward(n) + ' ' + T('coins') + ' + ' + T('node.rewardPick'));
+  } else if (n.type === 'rush') {
+    row(T('node.duration'), Math.round(root.Rush.RUSH.timeMs / 1000) + 's');
+    row(T('node.perMate'), '+' + rushPer(n) + ' ' + T('coins'));
   } else if (n.type === 'scenario') {
     const sc = D.SCENARIOS.find(s => s.id === n.scenarioId);
     row(T('node.difficulty'), h('span', { style: { color: D.DIFFS[sc.diff].color } }, T('diff.' + sc.diff)));
@@ -438,6 +441,7 @@ function enterNode(n) {
   else if (n.type === 'scenario') startScenario(n);
   else if (n.type === 'shop') showShop(n);
   else if (n.type === 'event') showEvent(n);
+  else if (n.type === 'rush') startRush(n);
   else showRest(n);
 }
 
@@ -507,6 +511,21 @@ function onMatchEnd(res, m, cfg, node, snapshot) {
     buttons.push({ label: T('result.endRun'), cls: 'danger', onClick: () => { CS.match.destroy(); CS.match = null; endRun(false); } });
     m.showResult(T('result.lose'), T('reason.' + res.reason) + (run.retries > 0 ? '' : '  ' + T('result.noRetries')), buttons, false);
   }
+}
+
+// ------------------------------------------------------------------ Mate Rush bonus node
+const rushPer = n => Math.round((4 + n.layer) * (1 + 0.1 * lvl('purse')) * (CS.run.relics.includes('lucky') ? 1.25 : 1));
+function startRush(n) {
+  const run = CS.run;
+  setPending('done', n);   // leaving in the middle forfeits the bonus instead of replaying it
+  root.Rush.start({ level: n.layer, perMate: rushPer(n), onDone: (score, coins) => {
+    run.coins += coins; saveRun();
+    if (coins) UI.sfx('buy');
+    UI.screen(h('div', { class: 'screen center-screen' }, runHeader(),
+      h('h1', { class: 'rush-title' }, T('rush.title')),
+      h('p', null, T('rush.result', { n: score, c: coins })),
+      h('div', { class: 'row center' }, btn(T('result.continue'), () => completeNode(n), 'primary'))));
+  } });
 }
 
 function afterWin(node) {
@@ -658,7 +677,6 @@ function showSplash() {
     h('div', { class: 'blink' }, T('title.clickToStart')),
     h('div', { class: 'version' }, T('title.version', { v: D.VERSION }))));
 }
-CS.saveMeta = saveMeta; CS.showTitle = showTitle;   // used by the Mate Rush mode (rush.js)
 CS.init = function () { loadMeta(); if (UI.audioAvailable()) showSplash(); else showTitle(); };
 CS._test = { continueRun, savedRun, genMap, buildEnemyArmy, setupFEN, newRun, armyValue, makeRewards, EVENTS, reachable };
 })(window);

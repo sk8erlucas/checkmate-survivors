@@ -1,18 +1,19 @@
 /* =========================================================================
  * Checkmate Survivors - rush.js
- * Mate Rush: a quick mode. Solve as many mate-in-one puzzles as you can in
- * 3 minutes. Positions are generated at random and verified by the engine;
- * a wrong move costs 10 seconds. The score turns into Crowns.
+ * Mate Rush: a bonus node of the run map. Solve as many mate-in-one puzzles
+ * as you can before the timer runs out; every mate pays coins and a wrong
+ * move costs 10 seconds. Positions are generated at random and verified by
+ * the engine, so they never run out.
  * ====================================================================== */
 (function (root) {
 'use strict';
-const C = root.Chess, UI = root.UI, D = root.Data, SP = root.Sprites;
+const C = root.Chess, UI = root.UI;
 const T = (k, v) => root.I18N.t(k, v), h = UI.h;
-const RUSH = { timeMs: 180000, penaltyMs: 10000 };
+const RUSH = { timeMs: 60000, penaltyMs: 10000 };
 const rnd = n => Math.floor(Math.random() * n);
 
 // ---------------------------------------------------------------- generator
-// Attacking sets grow with the score; defenders add noise and false leads.
+// Attacking sets grow with the level; defenders add noise and false leads.
 const SETS = [['q'], ['r', 'r'], ['q', 'n'], ['r', 'b'], ['q', 'b'], ['r', 'n'], ['r', 'b', 'n'], ['q', 'r'], ['b', 'b', 'n', 'r']];
 function fenOf(board) {
   let s = '';
@@ -60,30 +61,31 @@ function generate(level) {
   return { fen: '6k1/5ppp/8/8/8/8/5PPP/4Q1K1 w - - 0 1', solutions: 1 };   // fallback: a known mate in one
 }
 
-// ---------------------------------------------------------------- mode
-const state = { score: 0, left: 0, last: 0, timer: null, match: null, over: false };
-function header() {
+// ---------------------------------------------------------------- bonus round
+// opts: { level, perMate (coins), timeMs, header (element shown above the board), onDone(score, coins) }
+const state = { score: 0, left: 0, last: 0, timer: null, match: null, over: true, opts: null };
+const coins = () => state.score * state.opts.perMate;
+function fmt(ms) { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function bar() {
   return h('div', { class: 'rush-bar panel' },
     h('div', { class: 'rush-title' }, T('rush.title')),
-    state.elTime = h('div', { class: 'clock rush-clock' }),
-    h('div', { class: 'rush-score' }, T('rush.score') + ' ', state.elScore = h('b', null, state.score)),
-    h('div', { class: 'muted small' }, T('rush.best', { n: (root.CS.meta.stats.rushBest || 0) })),
-    h('button', { class: 'btn small', onclick: UI.fullscreen }, T('ui.fullscreen')),
+    state.elTime = h('div', { class: 'clock rush-clock' }, fmt(state.left)),
+    h('div', { class: 'rush-score' }, T('rush.score') + ' ', h('b', null, state.score)),
+    h('div', { class: 'rush-score' }, h('img', { class: 'icon coin', src: root.Sprites.iconURL('coin', '#f0d060'), alt: '' }), ' ', h('b', null, '+' + coins())),
+    h('div', { class: 'muted small' }, T('rush.per', { c: state.opts.perMate })),
     h('button', { class: 'btn small danger', onclick: () => finish() }, T('rush.stop')));
 }
-function fmt(ms) { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function tick() {
   const now = performance.now();
-  if (!state.match || !state.match.paused) state.left -= now - state.last;
-  state.last = now;
-  if (state.elTime) { state.elTime.textContent = fmt(state.left); state.elTime.classList.toggle('low', state.left < 20000); }
+  state.left -= now - state.last; state.last = now;
+  if (state.elTime) { state.elTime.textContent = fmt(state.left); state.elTime.classList.toggle('low', state.left < 15000); }
   if (state.left <= 0) finish();
 }
 function next() {
   if (state.over) return;
   if (state.match) { state.match.destroy(); state.match = null; }
-  const pz = generate(state.score);
-  const screen = h('div', { class: 'screen match-screen rush' }, header());
+  const pz = generate(state.opts.level + state.score);
+  const screen = h('div', { class: 'screen match-screen rush' }, state.opts.header ? state.opts.header() : null, bar());
   UI.screen(screen);
   const m = state.match = new root.Match({
     fen: pz.fen, playerColor: C.WHITE, enemy: { id: 'rival', style: 'balanced', tier: 'easy' },
@@ -99,32 +101,19 @@ function next() {
   m.mount(screen);
   m.begin();
 }
-function start() {
-  UI.sfx('click');
-  Object.assign(state, { score: 0, left: RUSH.timeMs, last: performance.now(), over: false });
+function start(opts) {
+  Object.assign(state, { opts: Object.assign({ level: 0, perMate: 5, timeMs: RUSH.timeMs }, opts), score: 0, over: false, last: performance.now() });
+  state.left = state.opts.timeMs;
   clearInterval(state.timer); state.timer = setInterval(tick, 100);
+  UI.sfx('click');
   next();
 }
-// 1 Crown per solved mate, +5 for a new personal best
 function finish() {
   if (state.over) return;
   state.over = true; clearInterval(state.timer);
   if (state.match) { state.match.destroy(); state.match = null; }
-  const meta = root.CS.meta, best = meta.stats.rushBest || 0, record = state.score > best;
-  const crowns = state.score + (record && state.score > 0 ? 5 : 0);
-  meta.crowns += crowns; if (record) meta.stats.rushBest = state.score;
-  root.CS.saveMeta(); UI.music(null); UI.sfx(state.score ? 'win' : 'lose');
-  UI.screen(h('div', { class: 'screen center-screen' },
-    h('h1', { class: 'good' }, T('rush.over')),
-    h('p', null, T('rush.result', { n: state.score })),
-    record && state.score ? h('p', { class: 'tip' }, T('rush.record')) : null,
-    h('div', { class: 'panel' },
-      h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('rush.solved')), h('b', null, state.score)),
-      h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('rush.bestLabel')), h('b', null, meta.stats.rushBest || 0)),
-      h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.crowns')), h('b', null, '+' + crowns))),
-    h('div', { class: 'menu' },
-      h('button', { class: 'btn primary', onclick: start }, T('rush.again')),
-      h('button', { class: 'btn', onclick: () => root.CS.showTitle() }, T('end.title')))));
+  UI.music(null); UI.sfx(state.score ? 'win' : 'lose');
+  state.opts.onDone(state.score, coins());
 }
 
 const api = { start, finish, generate, state, RUSH };

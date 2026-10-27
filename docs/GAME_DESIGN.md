@@ -1,7 +1,7 @@
 # Checkmate Survivors — Documento de diseño
 
 > Roguelite 2D de **ajedrez real** en pixel art. HTML5 + JavaScript puro, pensado para subirse a **itch.io**.
-> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.6.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
+> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.7.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
 > **Publicado** en itch.io: <https://fibonaku.itch.io/checkmate-survivors>
 
 ---
@@ -48,7 +48,7 @@ Motor propio (`js/chess.js`), validado con **perft** (conteo de nodos de posicio
 |---|---|
 | 1 | **Mayormente puzzles** (80% puzzle / 20% duelo de calentamiento), 3 nodos fáciles |
 | 2 | Mezcla con más puzzles: 50% puzzle, 25% duelo, 15% evento, 5% tienda, 5% fogata |
-| 3 | Duelo, Puzzle, Evento, Tienda o Fogata (3 nodos) |
+| 3 | Duelo, Puzzle, Evento, Tienda o Fogata (3 nodos), con **un Mate Rush garantizado** |
 | 4 | **Tienda y Fogata garantizadas** + 1 duelo |
 | 5 | Mixto |
 | 6 | Mixto (2 nodos) |
@@ -71,6 +71,7 @@ Probabilidad de dificultad por paso (fácil / normal / difícil): paso 1 100/0/0
 - **Puzzle (partida en curso)**: posición prefabricada con objetivo propio (mate en N, capturar la dama, sobrevivir...). Todas las posiciones están **validadas por un solver exhaustivo** en los tests.
 - **Tienda**: pociones, 1 amuleto y piezas (peón/otra pieza, dama a veces). Botones de precio dorados con ícono de moneda (en gris y con "no alcanza" si no te da la plata). **Renovar** el stock: la primera vez gratis, después 10, 20, 30... monedas. Comprar suena con una caja registradora.
 - **Premios**: la pantalla de premios también se puede **renovar** (1ª gratis, después 10, 20...), solo antes de elegir el primero.
+- **Mate Rush** (bonus): 60 s de mates en 1 seguidos; cada mate da monedas (sección 17).
 - **Evento**: decisiones con riesgo (El Apostador, El Viejo Relojero, El Ermitaño, El Pozo Extraño, El Prestamista).
 - **Fogata**: elegir una: +1 Reintento (máx. 3), +1 peón, o una poción.
 - **Jefe**: al vencerlo se completa el acto y la run termina en victoria.
@@ -323,7 +324,7 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 
 ---
 
-## 11. Estado (v0.6.0 · Early Alpha) y hoja de ruta
+## 11. Estado (v0.7.0 · Early Alpha) y hoja de ruta
 
 **Hecho:** motor completo, IA con 6 estilos, mapa ramificado, 4 tipos de objetivo, relojes, 6 pociones, 7 reliquias, 5 eventos, tienda, fogata, jefe, 10 puzzles, tienda permanente, guardado, EN/ES, sonido.
 **v0.2:** retratos animados de rivales con barra de vida, daño, reacciones y frases; nueva dama; tarjetas rediseñadas; guardar/continuar run.
@@ -331,6 +332,7 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 **v0.4.0:** dificultad bastante más baja (IA menos profunda, ejércitos enemigos más chicos, más tiempo, 5 peones y 1 Reintento al empezar, calentamiento de 3 pasos); tienda permanente más barata y más Coronas por run; siluetas de piezas rediseñadas; pantalla "clic para empezar" para que suene la música del menú; kit de itch.io (`marketing/`); `AGENTS.md`.
 **v0.5.0** (después de publicar en itch.io): música según el reloj (rápida = tema tranquilo); **rasgos de monstruo** implementados; **amuletos permanentes** en la tienda permanente (las "reliquias" pasan a llamarse amuletos); tienda con botones de precio nuevos, **renovar stock** (1ª gratis) y sonido de compra; ajuste a ventanas chicas + botón de pantalla completa; presentación de la batalla con el objetivo destacado en dorado, el reloj en celeste y el rasgo del rival; un poco más fácil (más errores de la IA, Ojo del Oráculo gratis al empezar).
 **v0.6.0:** los primeros pasos son **mayormente puzzles** (5 puzzles fáciles nuevos, 15 en total); **más monedas** por victoria; **renovar premios**; nuevo modo **Mate Rush** (sección 17).
+**v0.7.0:** Mate Rush deja de ser un modo aparte y pasa a ser un **nodo bonus del mapa** (60 s, monedas por mate, uno garantizado en el paso 3). Las demás ideas de modos se replantean como nodos de la run (sección 17).
 
 **Pendiente / ideas (por prioridad):**
 1. **Balance con partidas humanas**: el autor sigue sintiéndolo difícil. Registrar en `meta.stats` en qué paso termina cada run y contra quién, para ajustar con datos (sección 12).
@@ -405,25 +407,26 @@ El rasgo se ve en el detalle del nodo, debajo del nombre del rival (★) y en la
 - **Tamaño de tablero / modo vertical** para pantallas chicas.
 - **Coordenadas siempre visibles** y opción de mostrar la última jugada con flecha.
 
-## 17. Modos de juego
-### Run (modo principal)
-El roguelite completo: mapa, monstruos, tienda, eventos y jefe. Unos 25–30 minutos.
+## 17. Todo dentro de la run (decisión del autor, v0.7)
+**No hay modos de juego aparte**: cada idea nueva entra como **parte del juego principal**, sobre todo como un tipo de nodo del mapa, para que alimente la misma run (monedas, piezas, amuletos).
 
-### Mate Rush (modo rápido, v0.6)
-Para una partida corta o para practicar. Se elige en el menú principal.
-- **3 minutos** en total. En el tablero aparece un **mate en 1** y hay que encontrarlo.
-- **Acierto**: +1 punto y el siguiente puzzle. **Error** (cualquier jugada que no sea mate): **−10 s** y el siguiente puzzle. *Terminar* corta la partida.
-- **Puzzles generados al azar** (`js/rush.js`) y verificados por el motor: posición legal, nadie en jaque y al menos un mate en 1. No se repiten y no hace falta cargarlos a mano.
-- **Dificultad creciente** según los puntos:
-  - Los sets de ataque pasan de dama sola o dos torres a combinaciones de 3–4 piezas.
-  - Aparecen más defensores (piezas que distraen).
-  - Desde 6 puntos se exige una **única** jugada de mate (antes se aceptan hasta 3 soluciones).
-- **Premio**: 1 Corona por mate y +5 si es récord personal (`meta.stats.rushBest`). Así el modo rápido también alimenta la tienda permanente.
-- Música *rush*, reloj propio arriba (el de la partida se oculta) y el host es La Sombra.
+### Mate Rush: nodo bonus (implementado en v0.7)
+- **Nodo del mapa** (ícono de rayo, color coral). **Siempre hay uno en el paso 3** y puede aparecer en otros pasos (10% en el paso 2, 8% del paso 5 en adelante).
+- **60 segundos**: en el tablero aparece un **mate en 1** tras otro.
+  - **Acierto**: +1 mate y el siguiente puzzle.
+  - **Error** (cualquier jugada que no sea mate): **−10 s** y el siguiente puzzle.
+  - *Terminar* corta antes de tiempo.
+- **Paga monedas por mate**: `round((4 + paso) × (1 + 0.1×Monedero) × (1.25 si Moneda de la suerte))`. En el paso 3 son 6 monedas por mate: 8 mates dan 48 monedas, algo más que un duelo normal del mismo paso (42).
+- **Puzzles generados al azar** (`js/rush.js`) y verificados por el motor: posición legal, nadie en jaque y al menos un mate en 1. No se repiten.
+- **Dificultad**: arranca según el paso del mapa y sube con cada mate. Los sets de ataque pasan de dama sola o dos torres a combinaciones de 3–4 piezas, aparecen más defensores y, desde el nivel 6, hay una única jugada de mate.
+- **Salir a mitad** pierde el bonus (el nodo queda resuelto sin monedas), así que recargar no sirve para repetirlo.
+- La pantalla final muestra los mates y las monedas, y se vuelve al mapa.
 
-### Ideas para más modos
-- **Boss Rush**: los 3 jefes seguidos con un solo reloj compartido y tus mejoras permanentes; sin mapa.
-- **Desafío diario** (sección 15): una run con semilla fija por día.
-- **Mate Rush en 2**: la misma idea con mates en 2, para jugadores avanzados (el generador ya existe; hace falta una verificación más costosa, conviene precalcular en un worker).
-- **Supervivencia**: duelos seguidos contra monstruos cada vez más fuertes, sin tienda; puntaje = victorias.
+### Ideas que antes eran "modos", replanteadas como partes de la run
+| Idea | Cómo entra en la run |
+|---|---|
+| Boss Rush | **Nodo "Desafío de jefe"** (élite) en el paso 5: un mini-jefe con su rasgo y un premio de amuleto garantizado. Opcional, riesgoso. |
+| Supervivencia | **Nodo "Arena"**: 3 duelos cortos seguidos (bullet) contra monstruos fáciles. Cada victoria paga monedas y podés retirarte entre duelos con lo ganado. Perder no termina la run, solo corta la arena. |
+| Mate Rush en 2 | En el **Acto 2** el nodo Mate Rush pasa a mates en 2 (generación precalculada para que no se trabe). |
+| Desafío diario | **Run del día**: la misma run (mapa, monstruos y premios) con semilla fija por fecha. Se elige desde el botón de empezar run, no es un modo nuevo. |
 
