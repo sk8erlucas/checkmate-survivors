@@ -6,6 +6,8 @@ Roguelite de **ajedrez real** en pixel art (HTML5). Empezás con un rey y pocos 
 
 - **Jugar:** abrí `index.html` con doble clic (no necesita servidor ni instalación).
 - **Nodos bonus Mate Rush** en el mapa: 60 segundos de mates en 1, cada mate da monedas.
+- **Arena**: tres duelos cortos seguidos por monedas; perder no termina la run.
+- Resolución fija de **1280×720** que se escala a cualquier ventana.
 - **Diseño completo:** [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)
 - **Tests:** `node tests/perft.js`, `node tests/ai.js`, `node tests/scenarios.js`, `node tests/i18n.js`, `node tests/smoke.js`, `node tests/balance.js`
 - **Página de itch.io:** portada, capturas y textos en [`marketing/`](marketing/ITCH_PAGE.md).

@@ -15,10 +15,10 @@ Everything you need to fill in the itch.io "Create new project" form. Copy each 
 | **Short description or tagline** | Real chess, roguelite runs, and a cast of monsters. Start with a king and a few pawns, and survive. |
 | **Classification** | Games |
 | **Kind of project** | HTML |
-| **Release status** | In development (early alpha, v0.7.0) |
+| **Release status** | In development (early alpha, v0.8.0) |
 | **Pricing** | No payments (or "Donate" if you want tips) |
 | **Uploads** | `dist/checkmate-survivors-html5.zip`, and tick **"This file will be played in the browser"** |
-| **Viewport dimensions** | 1280 × 760 recommended. Smaller embeds work too: the game zooms itself out to fit. Tick **Fullscreen button** (there is also an in-game Fullscreen button). Leave "Mobile friendly" off for now. |
+| **Viewport dimensions** | **1280 × 720** (the game's fixed reference resolution; it scales to any window and letterboxes). Tick **Fullscreen button** (there is also an in-game Fullscreen button). Leave "Mobile friendly" off for now. |
 | **Frame options** | Tick **Automatically start on page load**, because the game has its own "Click to start" screen for audio. |
 | **Genre** | Strategy |
 | **Tags** | chess, roguelite, roguelike, pixel-art, turn-based, strategy, monsters, singleplayer, puzzle, retro |
@@ -52,6 +52,7 @@ The rules of chess never change: real moves, castling, en passant and promotion.
 - **Varied objectives**: checkmate, mate in N, survive N moves, capture the queen, capture N pieces or promote a pawn.
 - **Puzzles**: 15 hand-made positions, every one verified solvable. The first steps of a run are mostly puzzles, a quick way in.
 - **Mate Rush bonus nodes**: 60 seconds of random mate-in-one puzzles on the map. Every mate pays coins, every wrong move costs 10 seconds.
+- **The Arena**: three short duels in a row for coins. Retire whenever you like; losing in the Arena doesn't end your run.
 - **Potions and amulets**: rewind, oracle hints, threat vision, time thief, and more. Reroll the shop when you don't like the offer (the first reroll is free).
 - **Permanent upgrades and an amulet collection**: earn Crowns every run, unlock lives, extra pawns and starting pieces, and buy amulets once to start every run with them.
 - **A gentle start**: the first steps are warm-up battles against weak monsters with simple goals.
@@ -90,6 +91,7 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 - **Objetivos variados**: mate, mate en N, sobrevivir, capturar la dama, capturar N piezas o coronar un peón.
 - **15 puzzles** hechos a mano y verificados; los primeros pasos de la run son mayormente puzzles.
 - **Nodos bonus Mate Rush**: 60 segundos de mates en 1 generados al azar dentro del mapa. Cada mate da monedas y cada error cuesta 10 segundos.
+- **La Arena**: tres duelos cortos seguidos por monedas. Retirate cuando quieras; perder en la Arena no termina tu run.
 - **Mejoras permanentes y colección de amuletos** con Coronas: vidas, peones extra, piezas iniciales, y amuletos que se compran una vez y te acompañan en todas las runs.
 - **Inicio amable**: los primeros pasos son batallas de calentamiento.
 - **Guardado automático** y **música chiptune** generada en el navegador.
@@ -101,7 +103,9 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 
 ## Devlog post (optional, for launch)
 
-> **Checkmate Survivors v0.7.0 is out!** Mate Rush is now a bonus node on the map: 60 seconds of mates in one, and every mate pays coins.
+> **Checkmate Survivors v0.8.0 is out!** The Arena (three quick duels for coins), a fixed 1280×720 layout that scales to any window and scrolls properly inside itch.io, and your last run shown on the title screen.
+
+> *(v0.7.0)* **Checkmate Survivors v0.7.0 is out!** Mate Rush is now a bonus node on the map: 60 seconds of mates in one, and every mate pays coins.
 
 > *(v0.6.0)* **Checkmate Survivors v0.6.0 is out!** A new quick mode, **Mate Rush**: 3 minutes of random mate-in-one puzzles. Runs now open with puzzles, battles pay more coins, and you can reroll your rewards.
 

@@ -60,8 +60,9 @@ function structural() {
     if (!L[3].some(n => n.type === 'shop') || !L[3].some(n => n.type === 'rest')) { fail++; console.log('FAIL layer 3 needs shop+rest'); return; }
     if (L[7][0].type !== 'boss') { fail++; console.log('FAIL boss'); return; }
     if (!L[2].some(n => n.type === 'rush')) { fail++; console.log('FAIL step 3 needs a Mate Rush'); return; }
+    if (!L[4].some(n => n.type === 'arena')) { fail++; console.log('FAIL step 5 needs an Arena'); return; }
   }
-  ok(true, '300 random maps: every node has entrance/exit, a Mate Rush at step 3, shop+rest at step 4, boss at the end');
+  ok(true, '300 random maps: every node has entrance/exit, a Mate Rush at step 3, shop+rest at step 4, an Arena at step 5, boss at the end');
   let bad = 0;
   for (let pts = 1; pts <= 60; pts++) for (let q = 0; q < 2; q++) {
     const a = CS._test.buildEnemyArmy(pts, !!q);
@@ -153,6 +154,13 @@ async function fullRun(first) {
       if (m.result.win) { findBtn('Continue').click(); if (node.type === 'boss') { await sleep(10); ended = true; break; } await claimRewards(); }
       else if (findBtn('Retry battle')) { findBtn('Retry battle').click(); await sleep(20); m.destroy(); const m2 = CS.match; ok(m2 && m2 !== m, 'retry restarts the battle'); m2.begin(); m2.finish({ win: true, reason: 'mate' }); await waitFor(() => findBtn('Continue'), 3000); findBtn('Continue').click(); await claimRewards(); }
       else { findBtn('End run').click(); ended = true; }
+    } else if (node.type === 'arena') {
+      const c0 = CS.run.coins; findBtn('Fight round 1').click(); const am = CS.match; ok(!!am, 'Arena round 1 starts a duel');
+      am.begin(); am.finish({ win: true, reason: 'captured' }); await waitFor(() => findBtn('Continue'), 3000, 'arena result'); findBtn('Continue').click();
+      ok(CS.run.coins > c0 && pageText().includes('Round 2'), 'winning an Arena round pays coins and offers the next one');
+      findBtn('Fight round 2').click(); const am2 = CS.match; am2.begin(); am2.finish({ win: false, reason: 'mated' });
+      await waitFor(() => findBtn('Continue'), 3000, 'arena loss'); const r0 = CS.run.retries; findBtn('Continue').click();
+      ok(!!CS.run && CS.run.retries === r0 && pageText().includes('Choose your path'), 'losing in the Arena only ends the Arena, not the run');
     } else if (node.type === 'rush') {
       const R = ctx.Rush; await waitFor(() => R.state.match, 3000, 'rush match'); const rm = R.state.match;
       rm.playerMove(rm.legalMoves.find(x => { rm.pos.make(x); const st = rm.pos.gameStatus(); rm.pos.unmake(); return st.result === 'checkmate'; }));
@@ -185,6 +193,7 @@ async function endAndLanguage() {
   const before = CS.meta.crowns; CS.meta.crowns += 500;
   const buy = buttons().find(b => b.className.includes('price-btn') && !b.disabled); buy.click();
   ok(Object.keys(CS.meta.levels).length === 1 && CS.meta.crowns < before + 500, 'buying a permanent upgrade works and persists');
+  ok(Array.isArray(CS.meta.stats.history) && CS.meta.stats.history.length > 0 && 'step' in CS.meta.stats.history[0], 'run history (step reached, who won) is saved for balancing');
   ok(JSON.parse(ctx.localStorage.getItem('checkmate_survivors_v1')).levels, 'progress saved to localStorage');
   findBtn('Back').click(); findBtn('Espa').click();
   ok(I18N.getLang() === 'es' && pageText().includes('Comenzar partida'), 'language switches to Spanish');
@@ -256,7 +265,7 @@ async function rushMode() {
   R.finish(); ok(done && done.score === 1 && done.coins === 5, 'finishing Mate Rush pays coins per mate');
 }
 (async () => {
-  try { structural(); await objectives(); await rushMode(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
+  try { structural(); await objectives(); await rushMode(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
   console.log(fail ? `\n${fail} FAILURES` : '\nALL SMOKE TESTS PASSED');
   process.exit(fail ? 1 : 0);
 })();

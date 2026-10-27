@@ -24,8 +24,8 @@ D.ENEMIES.forEach(e => { add('trait.' + e.id + '.name'); add('trait.' + e.id + '
 ['witch', 'spider', 'werewolf', 'goblin', 'lich', 'medusa'].forEach(t => add('toast.trait.' + t));
 ['pawn', 'knight', 'bishop', 'rook', 'queen'].forEach(p => add('piece.' + p));
 ['mate', 'mated', 'timeout', 'timeoutEnemy', 'queen', 'survived', 'survivedDraw', 'limit', 'resign', 'draw', 'promoted', 'captured'].forEach(r => add('reason.' + r));
-['duel', 'scenario', 'boss', 'shop', 'event', 'rest'].forEach(n => add('node.' + n));
-['duel', 'boss', 'shop', 'event', 'rest'].forEach(n => add('node.' + n + '.desc'));
+['duel', 'scenario', 'boss', 'shop', 'event', 'rest', 'rush', 'arena'].forEach(n => add('node.' + n));
+['duel', 'boss', 'shop', 'event', 'rest', 'rush', 'arena'].forEach(n => add('node.' + n + '.desc'));
 ['heal', 'train', 'brew'].forEach(r => add('rest.' + r));
 for (let i = 1; i <= 9; i++) add('help.' + i);
 const evs = { gambler: ['bet', 'leave', 'won', 'lost'], clockmaker: ['buy', 'trade', 'leave', 'bought', 'traded'], hermit: ['pay', 'leave', 'paid'], well: ['drink', 'leave', 'potion', 'coins', 'bad'], broker: ['sell', 'buy', 'leave', 'sold', 'bought'] };

@@ -133,6 +133,7 @@ function genMap() {
     else types = nodes.map(() => weighted(l === 0 ? ['duel', 'scenario'] : ['duel', 'scenario', 'event', 'shop', 'rest', 'rush'],
       t => (PUZZLE_FIRST[l] || { duel: 50, scenario: 14, event: 16, shop: 6, rest: 6, rush: 8 })[t] || 0));
     if (l === 2 && !types.includes('rush')) types[rnd(types.length)] = 'rush';   // every run gets at least one Mate Rush
+    if (l === 4 && !types.includes('arena')) types[rnd(types.length)] = 'arena'; // ...and one Arena before the boss
     nodes.forEach((n, i) => {
       n.type = types[i];
       if (n.type === 'duel') {
@@ -244,7 +245,7 @@ function priceBtn(price, can, onclick, crowns) {
     can ? null : h('span', { class: 'need' }, T('shop.need')));
 }
 const portrait = (id, cls) => h('img', { class: cls, src: root.Portraits.url(id, 'idle'), alt: '' });
-const NODE_COLOR = { rush: '#ff7a6a', scenario: '#7ac0f0', shop: '#e8b84a', event: '#c58cff', rest: '#ff9f5a', boss: '#b57cff' };
+const NODE_COLOR = { arena: '#ffb347', rush: '#ff7a6a', scenario: '#7ac0f0', shop: '#e8b84a', event: '#c58cff', rest: '#ff9f5a', boss: '#b57cff' };
 const nodeColor = n => (n.type === 'duel' || n.type === 'scenario') ? D.DIFFS[n.diff].color : NODE_COLOR[n.type];
 function objN(type, diff) { return D.OBJ_N[type] ? D.OBJ_N[type][diff] : 0; }
 
@@ -264,6 +265,12 @@ function runHeader() {
 }
 
 // ------------------------------------------------------------------ title / help / permanent shop
+function lastRunLine(m) {
+  const last = (m.stats.history || []).slice(-1)[0];
+  if (!last) return null;
+  return h('div', { class: 'muted small' }, last.victory ? T('title.lastWin') :
+    last.by ? T('title.lastBy', { step: last.step, foe: T('enemy.' + last.by + '.name') }) : T('title.lastStep', { step: last.step }));
+}
 function startRunConfirm() {
   if (savedRun() && !root.confirm(T('title.confirmNew'))) return;
   startRun();
@@ -285,6 +292,7 @@ function showTitle() {
         btn(UI.musicOn ? T('title.musicOn') : T('title.musicOff'), () => { UI.musicOn = !UI.musicOn; saveMeta(); showTitle(); }, 'small'),
         btn(T('ui.fullscreen'), UI.fullscreen, 'small'))),
     h('div', { class: 'muted small' }, T('title.stats', { runs: m.stats.runs, wins: m.stats.wins, best: m.stats.bestNodes })),
+    lastRunLine(m),
     h('div', { class: 'version' }, T('title.version', { v: D.VERSION }))));
 }
 function showHelp() {
@@ -341,7 +349,7 @@ function nodeEl(n, reach) {
       n.tc && n.type !== 'boss' ? h('span', { class: 'ntc' }, T('tc.' + n.tc)) : null) : null);
 }
 function legend() {
-  const items = [['duel', '#e8c84a'], ['scenario', NODE_COLOR.scenario], ['rush', NODE_COLOR.rush], ['shop', NODE_COLOR.shop], ['event', NODE_COLOR.event], ['rest', NODE_COLOR.rest], ['boss', NODE_COLOR.boss]];
+  const items = [['duel', '#e8c84a'], ['scenario', NODE_COLOR.scenario], ['rush', NODE_COLOR.rush], ['arena', NODE_COLOR.arena], ['shop', NODE_COLOR.shop], ['event', NODE_COLOR.event], ['rest', NODE_COLOR.rest], ['boss', NODE_COLOR.boss]];
   return h('div', { class: 'legend' }, items.map(([t, c]) => h('span', { class: 'legend-item' }, icon(t, c, null, 'chip'), T('node.' + t))));
 }
 // "your side of the board": army on its starting squares, potion slots and relics
@@ -418,6 +426,9 @@ function openNode(n) {
     row(T('match.objective'), T('obj.' + n.objType, { n: objN(n.objType, n.diff) }));
     row(T('match.time'), tc.base + 's' + (tc.inc ? ' +' + tc.inc + 's' : '') + '  (' + T('tc.' + n.tc) + ')');
     row(T('node.reward'), '~' + coinReward(n) + ' ' + T('coins') + ' + ' + T('node.rewardPick'));
+  } else if (n.type === 'arena') {
+    row(T('node.rounds'), ARENA.rounds.length);
+    row(T('node.reward'), ARENA.rounds.map((_, i) => arenaPrize(n, i)).join(' / ') + ' ' + T('coins'));
   } else if (n.type === 'rush') {
     row(T('node.duration'), Math.round(root.Rush.RUSH.timeMs / 1000) + 's');
     row(T('node.perMate'), '+' + rushPer(n) + ' ' + T('coins'));
@@ -442,6 +453,7 @@ function enterNode(n) {
   else if (n.type === 'shop') showShop(n);
   else if (n.type === 'event') showEvent(n);
   else if (n.type === 'rush') startRush(n);
+  else if (n.type === 'arena') showArena(n);
   else showRest(n);
 }
 
@@ -505,7 +517,7 @@ function onMatchEnd(res, m, cfg, node, snapshot) {
         UI.sfx('coin'); CS.match.destroy(); CS.match = null; afterWin(node);
       } }], true);
   } else {
-    setPending('lost', node);
+    setPending('lost', node); run.lastFoe = cfg.enemy.id;
     const buttons = [];
     if (run.retries > 0) buttons.push({ label: T('result.retry', { n: run.retries }), cls: 'primary', onClick: () => { run.retries--; setPending('node', node); launchMatch(cfg, node, snapshot); } });
     buttons.push({ label: T('result.endRun'), cls: 'danger', onClick: () => { CS.match.destroy(); CS.match = null; endRun(false); } });
@@ -526,6 +538,53 @@ function startRush(n) {
       h('p', null, T('rush.result', { n: score, c: coins })),
       h('div', { class: 'row center' }, btn(T('result.continue'), () => completeNode(n), 'primary'))));
   } });
+}
+
+// ------------------------------------------------------------------ Arena node
+// Three short duels in a row against weak monsters. Each win pays coins at
+// once; you may retire between rounds, and losing only ends the Arena.
+const ARENA = { rounds: [{ diff: 'easy', pay: 1 }, { diff: 'easy', pay: 1.5 }, { diff: 'normal', pay: 2.2 }], tc: 'blitz' };
+const arenaPrize = (n, i) => Math.round((8 + n.layer * 2) * ARENA.rounds[i].pay * (1 + 0.1 * lvl('purse')) * (CS.run.relics.includes('lucky') ? 1.25 : 1));
+function showArena(n) {
+  const run = CS.run;
+  setPending('done', n);   // leaving mid-arena keeps what you won but ends it
+  const A = n.arena = n.arena || { round: 0, won: 0 };
+  if (!A.foes) A.foes = ARENA.rounds.map(r => pickOne(D.ENEMIES.filter(e => e.tier === r.diff)).id);
+  saveRun();
+  const steps = ARENA.rounds.map((r, i) => h('div', { class: 'arena-step' + (i < A.round ? ' won' : i === A.round ? ' next' : '') },
+    h('img', { class: 'nodeimg', src: root.Portraits.url(A.foes[i], i < A.round ? 'ko' : 'idle'), alt: '' }),
+    h('div', { class: 'small' }, T('arena.round', { n: i + 1 })), h('b', { class: 'gold' }, '+' + arenaPrize(n, i))));
+  const left = A.round < ARENA.rounds.length;
+  UI.screen(h('div', { class: 'screen center-screen' }, runHeader(), icon('arena', NODE_COLOR.arena, null, 'big'),
+    h('h2', null, T('node.arena')), h('p', { class: 'muted' }, left ? T('arena.intro') : T('arena.cleared')),
+    h('div', { class: 'row center arena-steps' }, steps),
+    A.won ? h('p', null, T('arena.won', { c: A.won })) : null,
+    h('div', { class: 'row center' },
+      left ? btn(T('arena.fight', { n: A.round + 1 }), () => arenaRound(n), 'primary') : null,
+      btn(left ? (A.round ? T('arena.retire') : T('arena.skip')) : T('result.continue'), () => completeNode(n), left ? '' : 'primary'))));
+}
+function arenaRound(n) {
+  const run = CS.run, A = n.arena, r = ARENA.rounds[A.round], e = D.ENEMIES.find(x => x.id === A.foes[A.round]), tc = D.TIMECTRL[ARENA.tc];
+  const ea = buildEnemyArmy(Math.max(2, Math.round(armyValue(run.army) * D.DIFFS[r.diff].budget[0])), false);
+  const pieces = D.PIECE_ORDER.reduce((t, k) => t + ea[k], 0);
+  const cfg = {
+    fen: setupFEN(run.army, ea), playerColor: 0, enemy: { id: e.id, style: e.style, tier: r.diff, thief: 0, hourglass: 0 },
+    objective: { type: 'capture', n: Math.min(2, pieces) }, time: timeFor(tc.base, tc.inc), music: TC_MUSIC[ARENA.tc],
+    items: run.potions.slice(), relics: run.relics.slice(), note: T('arena.note'),
+    onSteal: c => { const t = Math.min(c, run.coins); run.coins -= t; return t; },
+  };
+  cfg.onEnd = (res, m) => {
+    run.potions = m.items.slice();
+    const prize = arenaPrize(n, A.round);
+    if (res.win) { A.round++; A.won += prize; run.coins += prize; run.stats.wins++; saveRun(); }
+    m.showResult(res.win ? T('arena.roundWon', { c: prize }) : T('arena.out'), T('reason.' + res.reason),
+      [{ label: T('result.continue'), cls: 'primary', onClick: () => { UI.sfx(res.win ? 'buy' : 'click'); CS.match.destroy(); CS.match = null; if (res.win) showArena(n); else completeNode(n); } }], res.win);
+  };
+  if (CS.match) CS.match.destroy();
+  const screen = h('div', { class: 'screen match-screen' });
+  UI.screen(screen);
+  CS.match = new root.Match(cfg);
+  CS.match.mount(screen);
 }
 
 function afterWin(node) {
@@ -652,6 +711,8 @@ function endRun(victory) {
   const cheapest = Math.min(...D.META.filter(u => lvl(u.id) < u.max).map(u => u.cost[lvl(u.id)]));
   m.crowns += crowns; m.stats.runs++; if (victory) m.stats.wins++;
   m.stats.bestNodes = Math.max(m.stats.bestNodes, run.stats.nodes);
+  const step = run.cur ? run.cur.layer + 1 : 0;   // where the run ended, for balancing (last 30 runs)
+  m.stats.history = (m.stats.history || []).concat({ step, nodes: run.stats.nodes, wins: run.stats.wins, victory: !!victory, by: victory ? null : run.lastFoe || null }).slice(-30);
   saveMeta(); CS.run = null; UI.store.saveRun(null);
   UI.sfx(victory ? 'win' : 'lose');
   UI.screen(h('div', { class: 'screen center-screen' },

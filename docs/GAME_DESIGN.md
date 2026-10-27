@@ -1,7 +1,7 @@
 # Checkmate Survivors — Documento de diseño
 
 > Roguelite 2D de **ajedrez real** en pixel art. HTML5 + JavaScript puro, pensado para subirse a **itch.io**.
-> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.7.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
+> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.8.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
 > **Publicado** en itch.io: <https://fibonaku.itch.io/checkmate-survivors>
 
 ---
@@ -50,7 +50,7 @@ Motor propio (`js/chess.js`), validado con **perft** (conteo de nodos de posicio
 | 2 | Mezcla con más puzzles: 50% puzzle, 25% duelo, 15% evento, 5% tienda, 5% fogata |
 | 3 | Duelo, Puzzle, Evento, Tienda o Fogata (3 nodos), con **un Mate Rush garantizado** |
 | 4 | **Tienda y Fogata garantizadas** + 1 duelo |
-| 5 | Mixto |
+| 5 | Mixto, con **una Arena garantizada** |
 | 6 | Mixto (2 nodos) |
 | 7 | **Fogata y Tienda** (descanso antes del jefe) |
 | Jefe | **The Hourglass Lich / El Liche del Reloj** (ladrón de tiempo) |
@@ -72,6 +72,7 @@ Probabilidad de dificultad por paso (fácil / normal / difícil): paso 1 100/0/0
 - **Tienda**: pociones, 1 amuleto y piezas (peón/otra pieza, dama a veces). Botones de precio dorados con ícono de moneda (en gris y con "no alcanza" si no te da la plata). **Renovar** el stock: la primera vez gratis, después 10, 20, 30... monedas. Comprar suena con una caja registradora.
 - **Premios**: la pantalla de premios también se puede **renovar** (1ª gratis, después 10, 20...), solo antes de elegir el primero.
 - **Mate Rush** (bonus): 60 s de mates en 1 seguidos; cada mate da monedas (sección 17).
+- **Arena**: 3 duelos cortos seguidos; cada victoria paga en el momento, podés retirarte entre rondas y perder solo termina la Arena (sección 17).
 - **Evento**: decisiones con riesgo (El Apostador, El Viejo Relojero, El Ermitaño, El Pozo Extraño, El Prestamista).
 - **Fogata**: elegir una: +1 Reintento (máx. 3), +1 peón, o una poción.
 - **Jefe**: al vencerlo se completa el acto y la run termina en victoria.
@@ -315,16 +316,16 @@ Pasos:
 1. Ejecutar `package-itch.ps1` (o usar `dist/checkmate-survivors-html5.zip`, ya generado). El zip contiene `index.html` en la raíz + `css/` + `js/` (no incluye `marketing/` ni `docs/`).
 2. En itch.io: *Create new project* → *Kind of project*: **HTML**.
 3. Subir el zip y marcar **"This file will be played in the browser"**.
-4. *Embed options*: viewport **1280 × 760**, botón de pantalla completa, "Automatically start on page load" (el juego tiene su propia pantalla de "clic para empezar").
+4. *Embed options*: viewport **1280 × 720**, botón de pantalla completa, "Automatically start on page load" (el juego tiene su propia pantalla de "clic para empezar").
 
-**Resolución**: el juego está pensado para unos 1200×740. En ventanas más chicas (por ejemplo el embed de itch.io sin pantalla completa) `UI.fit` **achica todo con zoom** (hasta 50%) en vez de cortarlo, y el diseño de una columna queda solo para teléfonos (<640 px). Hay un botón **Pantalla completa** en el menú y en el encabezado de la run.
+**Resolución**: fija de 1280×720, escalada a la ventana, con scroll interno (ver sección 18). Hay un botón **Pantalla completa** en el menú y en el encabezado de la run.
 5. Opcional: `butler push dist/checkmate-survivors-html5.zip usuario/checkmate-survivors:html5` para actualizar rápido.
 
 Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge headless (ver `AGENTS.md`).
 
 ---
 
-## 11. Estado (v0.7.0 · Early Alpha) y hoja de ruta
+## 11. Estado (v0.8.0 · Early Alpha) y hoja de ruta
 
 **Hecho:** motor completo, IA con 6 estilos, mapa ramificado, 4 tipos de objetivo, relojes, 6 pociones, 7 reliquias, 5 eventos, tienda, fogata, jefe, 10 puzzles, tienda permanente, guardado, EN/ES, sonido.
 **v0.2:** retratos animados de rivales con barra de vida, daño, reacciones y frases; nueva dama; tarjetas rediseñadas; guardar/continuar run.
@@ -333,9 +334,10 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 **v0.5.0** (después de publicar en itch.io): música según el reloj (rápida = tema tranquilo); **rasgos de monstruo** implementados; **amuletos permanentes** en la tienda permanente (las "reliquias" pasan a llamarse amuletos); tienda con botones de precio nuevos, **renovar stock** (1ª gratis) y sonido de compra; ajuste a ventanas chicas + botón de pantalla completa; presentación de la batalla con el objetivo destacado en dorado, el reloj en celeste y el rasgo del rival; un poco más fácil (más errores de la IA, Ojo del Oráculo gratis al empezar).
 **v0.6.0:** los primeros pasos son **mayormente puzzles** (5 puzzles fáciles nuevos, 15 en total); **más monedas** por victoria; **renovar premios**; nuevo modo **Mate Rush** (sección 17).
 **v0.7.0:** Mate Rush deja de ser un modo aparte y pasa a ser un **nodo bonus del mapa** (60 s, monedas por mate, uno garantizado en el paso 3). Las demás ideas de modos se replantean como nodos de la run (sección 17).
+**v0.8.0:** **resolución fija de 1280×720** escalada a la ventana, con scroll interno (arregla tiendas y pantallas largas que no se podían recorrer, sección 18); nodo **Arena**; **historial de runs** (paso alcanzado y quién te venció) para balancear, con la última run en el menú.
 
 **Pendiente / ideas (por prioridad):**
-1. **Balance con partidas humanas**: el autor sigue sintiéndolo difícil. Registrar en `meta.stats` en qué paso termina cada run y contra quién, para ajustar con datos (sección 12).
+1. **Balance con partidas humanas**: el autor sigue sintiéndolo difícil. Ya se registra en `meta.stats.history` en qué paso termina cada run y contra quién (v0.8); falta mirar esos datos tras varias runs y ajustar (sección 12).
 2. Pieza "estrella" por monstruo con efecto visual (la dama araña deja telaraña) y temas musicales por monstruo.
 3. **Actos 2 y 3** (sección 14).
 4. Eventos con monstruos y más puzzles (mate en 3–4, finales de peones, tácticas).
@@ -368,7 +370,7 @@ Simulación (`tests/balance.js`, jugador proxy de profundidad 2, ejército inici
 | Difícil | 0 / 2 / 6 |
 | Jefe | 0 / 0 / 8 |
 
-Los difíciles y el jefe se enfrentan más tarde, con un ejército más grande; con 5 peones solos se espera perder. **Próximo paso:** registrar en partidas reales en qué paso termina cada run (se puede guardar en `meta.stats`) y ajustar con datos.
+Los difíciles y el jefe se enfrentan más tarde, con un ejército más grande; con 5 peones solos se espera perder. **Registro (v0.8):** al terminar cada run se guarda en `meta.stats.history` (últimas 30) el paso alcanzado, nodos, victorias, si ganó y qué monstruo la terminó. El menú muestra la última ("llegaste al paso 3, te venció la Viuda Tejedora"). **Próximo paso:** si muchas runs mueren en el mismo paso o contra el mismo monstruo, bajar ese tier o ese rival.
 
 ## 13. Rasgos de monstruo (implementado en v0.5)
 Cada monstruo suma **un rasgo** que no cambia las reglas del ajedrez. Actúa sobre el reloj, los objetos o la economía de la run, se muestra en el detalle del nodo y tiene su propia animación en el retrato.
@@ -426,7 +428,28 @@ El rasgo se ve en el detalle del nodo, debajo del nombre del rival (★) y en la
 | Idea | Cómo entra en la run |
 |---|---|
 | Boss Rush | **Nodo "Desafío de jefe"** (élite) en el paso 5: un mini-jefe con su rasgo y un premio de amuleto garantizado. Opcional, riesgoso. |
-| Supervivencia | **Nodo "Arena"**: 3 duelos cortos seguidos (bullet) contra monstruos fáciles. Cada victoria paga monedas y podés retirarte entre duelos con lo ganado. Perder no termina la run, solo corta la arena. |
+| Supervivencia | **Nodo "Arena" (implementado en v0.8)**: ver abajo. |
 | Mate Rush en 2 | En el **Acto 2** el nodo Mate Rush pasa a mates en 2 (generación precalculada para que no se trabe). |
 | Desafío diario | **Run del día**: la misma run (mapa, monstruos y premios) con semilla fija por fecha. Se elige desde el botón de empezar run, no es un modo nuevo. |
+
+### Arena: nodo de riesgo (implementado en v0.8)
+- **Siempre hay una en el paso 5.**
+- Al entrar se ven los **3 rivales** (fácil, fácil, normal) y el premio de cada ronda: `round((8 + paso×2) × {1, 1.5, 2.2})`, con Monedero y Moneda de la suerte. En el paso 5 son 16 / 24 / 35 monedas.
+- **Cada ronda es un duelo corto**: reloj blitz y objetivo **capturar 2 piezas**. Valen el rasgo del monstruo y tus pociones.
+- **Ganar** paga en el momento y habilita la ronda siguiente. Entre rondas podés **retirarte** con lo ganado.
+- **Perder** solo termina la Arena: la run sigue y **no se gasta un Reintento**. Si salís a mitad, conservás lo cobrado.
+- Cada ronda ganada cuenta como batalla ganada para las Coronas.
+
+## 18. Resolución y formato (v0.8)
+**Decisión: resolución fija de referencia de 1280×720, horizontal (16:9).** Todo el juego vive en un escenario (`#stage`) de ese tamaño que `UI.fit` **escala para llenar la ventana**, con bandas oscuras si la proporción no coincide. Las pantallas largas (tienda, mapa con el panel de tu ejército, tienda permanente) hacen **scroll dentro del escenario**, nunca de la página. Así:
+- se arregla que algunas pantallas no se pudieran recorrer dentro del iframe de itch.io, incluso en pantalla completa;
+- se ve igual en cualquier pantalla: en 1920×1080 todo se agranda 1.5× y el pixel art queda nítido;
+- los modales y avisos están dentro del escenario y escalan con él.
+
+**¿Por qué horizontal y no vertical?**
+- **El público de itch.io juega casi todo en escritorio**, y el embed de itch se muestra dentro de una página horizontal. Un 9:16 en un monitor 1080p queda de unos 540×960: tablero chico y mucho espacio vacío a los costados.
+- **El diseño ya aprovecha el ancho**: el rival animado a la izquierda, el tablero al centro y las pociones y amuletos a la derecha. En vertical habría que apilarlos y el tablero bajaría de 560 px a unos 480.
+- **El vertical sí es mejor para celular.** Queda como trabajo futuro: un segundo escenario de **720×1280** (tablero arriba, rival y pociones abajo) que se elija solo cuando la ventana sea más alta que ancha, con las mismas pantallas reacomodadas. Recién ahí convendría marcar "Mobile friendly" en itch.
+
+**Configuración en itch.io:** *Viewport dimensions* **1280 × 720**, activar *Fullscreen button* y *Automatically start on page load*.
 

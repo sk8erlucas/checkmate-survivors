@@ -25,7 +25,7 @@ js/i18n.js          all text (EN/ES)
 js/ui.js            DOM helper h(), screens, toasts, storage (meta + saved run), SFX and the music sequencer
 js/match.js         one battle: Avatar (opponent widget), board drawing + effects, clocks, objectives, potions
 js/run.js           the run: map generation and drawing, nodes, rewards, shop, events, rest, meta shop, save/continue
-js/rush.js          Mate Rush bonus node: random mate-in-one generator + 60 s timer, pays coins per mate (reuses Match)
+js/rush.js          Mate Rush bonus node (the Arena node lives in run.js): random mate-in-one generator + 60 s timer, pays coins per mate (reuses Match)
 tests/              node scripts (see below)
 marketing/          itch.io cover, screenshots and page text (ITCH_PAGE.md)
 dist/               the zip uploaded to itch.io
@@ -44,7 +44,7 @@ node tests/balance.js [games] [proxyDepth]   # optional, slow: win rates per tie
 Packaging for itch.io: `package-itch.ps1` zips `index.html`, `css/` and `js/` into `dist/checkmate-survivors-html5.zip`. If script execution is blocked, run its `Compress-Archive` line directly.
 
 ## Testing notes
-- The UI is designed for about 1200×740. `UI.fit` zooms `#app` out in smaller windows (itch.io embeds), and the one-column layout is only for phones (<640 px). Check new screens in a small window too, for example 900×560.
+- **Fixed reference resolution: 1280×720.** Everything lives in `#stage` (1280×720), which `UI.fit` scales to the window with CSS zoom (letterboxed). `#app` inside it is the scroll container: long screens scroll there, never the page. Modals and toasts are inside the stage too. Don't use `vh`/`vw` or media queries for layout. Every screen must work at 1280×720, scrolling if it's taller. The match screen must fit without scrolling.
 - `tests/smoke.js` runs the real scripts in a minimal DOM stub (the `N` class). Canvas contexts are no-op proxies, `querySelector` only understands `[data-id="..."]`, and there is no `AudioContext`, so the splash screen is skipped and audio is a no-op. If you add a DOM API the stub lacks, guard it (see `el.style.setProperty` in `ui.js`) or extend the stub.
 - The fake DOM can't show what things look like. **Check visual changes in a real browser.** The pattern used so far is headless Edge with a scripted copy of `index.html` (absolute `file:///` script paths plus a `<script>` that clicks through screens):
   `msedge --headless=new --allow-file-access-from-files --user-data-dir=<fresh dir> --window-size=1280,720 --virtual-time-budget=1200 --screenshot=<out.png> file:///<page>.html`

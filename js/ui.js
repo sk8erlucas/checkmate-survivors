@@ -23,20 +23,24 @@ function h(tag, props, ...kids) {
 }
 
 const UI = { h };
-let appEl = null, toastBox = null;
+// The game has a fixed reference resolution: everything lives in a 1280x720
+// "stage" that is scaled to fill the window (letterboxed if the aspect differs).
+// Long screens scroll inside the stage, never the page.
+UI.W = 1280; UI.H = 720;
+let appEl = null, stageEl = null, toastBox = null;
 UI.init = function () {
   appEl = document.getElementById('app');
+  stageEl = h('div', { id: 'stage' });
+  document.body.appendChild(stageEl); stageEl.appendChild(appEl);
   toastBox = h('div', { class: 'toasts' });
-  document.body.appendChild(toastBox);
+  stageEl.appendChild(toastBox);
   UI.fit();
   if (root.addEventListener) root.addEventListener('resize', UI.fit);
 };
-// Fit the game to small windows (e.g. the itch.io embed when not in fullscreen):
-// the layout is designed for ~1200x740, so smaller viewports zoom the app out.
 UI.fit = function () {
-  if (!appEl || !root.innerWidth) return;
-  const z = Math.max(0.5, Math.min(1, root.innerWidth / 1200, root.innerHeight / 740));
-  appEl.style.zoom = z < 1 ? String(Math.round(z * 100) / 100) : '';
+  if (!stageEl || !root.innerWidth) return;
+  const z = Math.max(0.3, Math.min(root.innerWidth / UI.W, root.innerHeight / UI.H));
+  stageEl.style.zoom = String(Math.floor(z * 1000) / 1000);
 };
 UI.fullscreen = function () {
   const d = root.document, el = d.documentElement;
@@ -46,12 +50,12 @@ UI.fullscreen = function () {
   } catch (e) { /* not allowed in this frame */ }
 };
 UI.screen = function (el) {
-  appEl.innerHTML = ''; appEl.appendChild(el); window.scrollTo(0, 0);
+  appEl.innerHTML = ''; appEl.appendChild(el); appEl.scrollTop = 0;
   if (!el.classList.contains('match-screen')) UI.music('menu');   // battles switch to their own track on start
 };
 UI.modal = function (content) {
   const ov = h('div', { class: 'modal-overlay' }, h('div', { class: 'modal' }, content));
-  document.body.appendChild(ov);
+  stageEl.appendChild(ov);
   return { close() { ov.remove(); }, el: ov };
 };
 UI.toast = function (msg, kind) {
