@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI coding agents working on **Checkmate Survivors**, a chess roguelite in pixel art (HTML5 + plain JavaScript). Read `docs/GAME_DESIGN.md` for the full design. This file covers how to work in the code.
+Guidance for AI coding agents working on **Checkmate Survivors**, a chess roguelite in pixel art (HTML5 + plain JavaScript), published at <https://fibonaku.itch.io/checkmate-survivors>. Read `docs/GAME_DESIGN.md` for the full design. This file covers how to work in the code.
 
 ## Ground rules
 - **Real chess only.** Never change the rules, invent pieces or exceed a standard army (8P 2N 2B 2R 1Q). All variety lives around the board: map, objectives, clocks, potions, relics, opponents.
@@ -13,7 +13,7 @@ Guidance for AI coding agents working on **Checkmate Survivors**, a chess roguel
 
 ## Layout
 ```
-index.html          loads the scripts in order (chess → ai → sprites → portraits → data → i18n → ui → match → run → main)
+index.html          loads the scripts in order (chess → ai → sprites → portraits → data → i18n → ui → match → run → rush → main)
 css/style.css       all styling (dark pixel theme, CSS custom properties in :root)
 js/chess.js         rules engine: 64-square board, make/unmake, legal moves, SAN, draws, perft
 js/ai.js            hand-written AI: negamax + alpha-beta, quiescence, TT, personalities (style weights)
@@ -24,6 +24,7 @@ js/i18n.js          all text (EN/ES)
 js/ui.js            DOM helper h(), screens, toasts, storage (meta + saved run), SFX and the music sequencer
 js/match.js         one battle: Avatar (opponent widget), board drawing + effects, clocks, objectives, potions
 js/run.js           the run: map generation and drawing, nodes, rewards, shop, events, rest, meta shop, save/continue
+js/rush.js          Mate Rush quick mode: random mate-in-one generator + 3-minute timer (reuses Match)
 tests/              node scripts (see below)
 marketing/          itch.io cover, screenshots and page text (ITCH_PAGE.md)
 dist/               the zip uploaded to itch.io
@@ -35,13 +36,14 @@ Run all of these before saying a change works:
 node tests/perft.js       # move generator vs reference node counts
 node tests/ai.js          # AI finds mates, doesn't hang pieces
 node tests/scenarios.js   # every puzzle is legal and solvable
-node tests/i18n.js        # every key exists in EN and ES with the same placeholders
+node tests/i18n.js        # every key exists in EN and ES with the same placeholders (scans run.js, match.js, rush.js)
 node tests/smoke.js       # plays full runs through the UI in a fake DOM
 node tests/balance.js [games] [proxyDepth]   # optional, slow: win rates per tier
 ```
 Packaging for itch.io: `package-itch.ps1` zips `index.html`, `css/` and `js/` into `dist/checkmate-survivors-html5.zip`. If script execution is blocked, run its `Compress-Archive` line directly.
 
 ## Testing notes
+- The UI is designed for about 1200×740. `UI.fit` zooms `#app` out in smaller windows (itch.io embeds), and the one-column layout is only for phones (<640 px). Check new screens in a small window too, for example 900×560.
 - `tests/smoke.js` runs the real scripts in a minimal DOM stub (the `N` class). Canvas contexts are no-op proxies, `querySelector` only understands `[data-id="..."]`, and there is no `AudioContext`, so the splash screen is skipped and audio is a no-op. If you add a DOM API the stub lacks, guard it (see `el.style.setProperty` in `ui.js`) or extend the stub.
 - The fake DOM can't show what things look like. **Check visual changes in a real browser.** The pattern used so far is headless Edge with a scripted copy of `index.html` (absolute `file:///` script paths plus a `<script>` that clicks through screens):
   `msedge --headless=new --allow-file-access-from-files --user-data-dir=<fresh dir> --window-size=1280,720 --virtual-time-budget=1200 --screenshot=<out.png> file:///<page>.html`
@@ -49,10 +51,12 @@ Packaging for itch.io: `package-itch.ps1` zips `index.html`, `css/` and `js/` in
 - Sprites and portraits can be previewed in Node: the modules export their masks/renderers (`Sprites._masks`, `Sprites._shade`, `Sprites.FACTIONS`, `Portraits.render`). Write a small PNG with `zlib` and look at it.
 
 ## Common tasks
-- **New opponent:** add it to `D.ENEMIES` (style, tier, optional `thief`/`hourglass`), add a portrait in `CHARS` (`portraits.js`), add a faction in `FACTIONS` (`sprites.js`: color, accent, `mod(m, t)`), and add `enemy.<id>.name/desc` and `say.<id>.{intro,hurt,taunt,win,lose,queen,promo,check}` in both languages. `tests/i18n.js` checks the keys.
+- **New opponent:** add it to `D.ENEMIES` (style, tier, optional `thief`/`hourglass`), give it a trait (`this.trait` hooks in `match.js`, plus `trait.<id>.name/desc` texts), add a portrait in `CHARS` (`portraits.js`), add a faction in `FACTIONS` (`sprites.js`: color, accent, `mod(m, t)`), and add `enemy.<id>.name/desc` and `say.<id>.{intro,hurt,taunt,win,lose,queen,promo,check}` in both languages. `tests/i18n.js` checks the keys.
 - **New puzzle:** add a FEN plus objective to `D.SCENARIOS` and its `scenario.<id>.name/desc` texts. `tests/scenarios.js` must still pass.
 - **New objective:** handle it in `Match.afterMove` (win/limit conditions) and `updateHud` (progress text), weight it in `OBJ_W` (`run.js`), and add `obj.<type>` plus any `reason.<x>` texts. Then add both lists to `tests/i18n.js`.
-- **Balance:** tune `D.DIFFS`, `D.INTRO`, `D.TIMECTRL`, `D.OBJ_N`, `D.META` costs and the Crowns formula in `endRun`. The author has asked twice for an easier early game, so check that the opening steps stay gentle.
+- **Amulets** are relics in code (`D.RELICS`, `relic.<id>.*` keys) but are called amulets in the UI. Permanent ones are `D.META` entries with an `amulet` field.
+- **Music:** tracks live in `TRACKS` (`ui.js`). Battles pick one from the clock (`TC_MUSIC` in `run.js`). Long games must stay calm: the author found fast music stressful there.
+- **Balance:** tune `D.DIFFS`, `D.INTRO`, `D.TIMECTRL`, `D.OBJ_N`, `D.META` costs and the Crowns formula in `endRun`. The author has asked three times for an easier game, so check that the opening steps stay gentle.
 - **Version:** bump `D.VERSION` (shown on the title screen). Keep it `0.x` while in early alpha, and update the version line in `docs/GAME_DESIGN.md` and `marketing/ITCH_PAGE.md`.
 
 ## Style

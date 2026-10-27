@@ -2,6 +2,8 @@
 
 Everything you need to fill in the itch.io "Create new project" form. Copy each block into its field.
 
+**Live page:** <https://fibonaku.itch.io/checkmate-survivors>
+
 ---
 
 ## Form fields
@@ -13,10 +15,10 @@ Everything you need to fill in the itch.io "Create new project" form. Copy each 
 | **Short description or tagline** | Real chess, roguelite runs, and a cast of monsters. Start with a king and a few pawns, and survive. |
 | **Classification** | Games |
 | **Kind of project** | HTML |
-| **Release status** | In development (early alpha, v0.4.0) |
+| **Release status** | In development (early alpha, v0.6.0) |
 | **Pricing** | No payments (or "Donate" if you want tips) |
 | **Uploads** | `dist/checkmate-survivors-html5.zip`, and tick **"This file will be played in the browser"** |
-| **Viewport dimensions** | 1280 × 760 (the match screen needs about 1240 px wide). Tick **Fullscreen button**. Leave "Mobile friendly" off for now. |
+| **Viewport dimensions** | 1280 × 760 recommended. Smaller embeds work too: the game zooms itself out to fit. Tick **Fullscreen button** (there is also an in-game Fullscreen button). Leave "Mobile friendly" off for now. |
 | **Frame options** | Tick **Automatically start on page load**, because the game has its own "Click to start" screen for audio. |
 | **Genre** | Strategy |
 | **Tags** | chess, roguelite, roguelike, pixel-art, turn-based, strategy, monsters, singleplayer, puzzle, retro |
@@ -26,7 +28,7 @@ Everything you need to fill in the itch.io "Create new project" form. Copy each 
 | **Languages** | English, Spanish |
 | **Average session** | About half an hour |
 | **Cover image** | `marketing/cover.png` (630 × 500) |
-| **Screenshots** (in this order) | `marketing/screenshots/03_spider_queen.png`, `04_boss_lich.png`, `02_map.png`, `05_witch_promotion.png`, `01_title.png`, `06_shop.png`, `07_upgrades.png` |
+| **Screenshots** (in this order) | `marketing/screenshots/03_spider_queen.png`, `04_boss_lich.png`, `08_mate_rush.png`, `02_map.png`, `05_witch_promotion.png`, `01_title.png`, `06_shop.png`, `07_upgrades.png` |
 
 > **Suggested theme colors** (Edit theme): background `#1a1322`, text `#efe6f7`, links/buttons `#e8b84a`, secondary `#b57cff`.
 
@@ -43,16 +45,18 @@ The rules of chess never change: real moves, castling, en passant and promotion.
 ### Features
 - **10 monster opponents, each with its own AI personality.** Gloop the Slime blunders, Grabby the Goblin grabs every piece, Boo the Ghost turtles, the Widow Weaver attacks your king, Count Vlastor drains your clock...
 - **Every monster plays with its own pieces.** Spider pieces have legs and red eyes, the witch's pawns wear little hats, the vampire's have capes, and the Lich's glow.
+- **Every monster has a trait** that bends the clock or your purse, never the rules: the Goblin pickpockets your coins, the Spider's web costs you seconds, the Witch hexes one of your potions, Medusa's gaze speeds up your clock, and the Lich has a second phase.
 - **Animated opponents** that react to the game: they flinch when you capture, gloat when they take your pieces, panic when you check them and mourn their queen. Their army is their health bar.
 - **Juicy captures**: particles, flying pieces, screen shake and hit sounds. The mated king topples over.
 - **The clock is a resource.** Bullet, blitz or rapid battles; potions that add time, freeze the enemy clock or steal seconds, and monsters that steal them back.
 - **Varied objectives**: checkmate, mate in N, survive N moves, capture the queen, capture N pieces or promote a pawn.
-- **Puzzles**: hand-made positions, every one verified solvable.
-- **Potions and relics**: rewind, oracle hints, threat vision, time thief, and more.
-- **Permanent upgrades**: earn Crowns every run and unlock lives, extra pawns, starting pieces and more.
+- **Puzzles**: 15 hand-made positions, every one verified solvable. The first steps of a run are mostly puzzles, a quick way in.
+- **Mate Rush mode**: 3 minutes, endless random mate-in-one puzzles, each wrong move costs 10 seconds. Beat your best score and earn Crowns.
+- **Potions and amulets**: rewind, oracle hints, threat vision, time thief, and more. Reroll the shop when you don't like the offer (the first reroll is free).
+- **Permanent upgrades and an amulet collection**: earn Crowns every run, unlock lives, extra pawns and starting pieces, and buy amulets once to start every run with them.
 - **A gentle start**: the first steps are warm-up battles against weak monsters with simple goals.
 - **Auto-save**: close the tab and continue your run later.
-- **Chiptune music and sound**, all synthesized in the browser.
+- **Chiptune music and sound**, all synthesized in the browser. Calm music in long games, faster tracks in bullet games.
 - **English and Spanish.**
 
 ### How to play
@@ -77,14 +81,16 @@ Empezás con un rey y un puñado de peones. Cada paso del mapa es una decisión:
 Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al paso y coronación. Lo roguelite está en todo lo que rodea al tablero.
 
 ### Características
+- **Cada monstruo tiene un rasgo** que afecta el reloj o tus monedas, nunca las reglas: el goblin te roba monedas, la telaraña te cuesta segundos, la bruja hechiza una poción y el Liche tiene segunda fase.
 - **10 monstruos rivales con personalidad de juego propia.** Gloop el Slime se equivoca, Grabby el Goblin come todo lo que puede, Buu el Fantasma se encierra, la Viuda Tejedora ataca a tu rey, el Conde Vlastor te drena el reloj...
 - **Cada monstruo juega con sus propias piezas**: las de la araña tienen patas y ojos rojos, los peones de la bruja llevan sombrerito, los del vampiro, capa, y las del Liche brillan.
 - **Rivales animados** que reaccionan: se duelen cuando les comés, festejan cuando te comen, entran en pánico con el jaque y lloran a su dama. Su ejército es su barra de vida.
 - **Capturas con impacto**: partículas, piezas que salen volando, temblor y sonidos de golpe. El rey derrotado cae de costado.
 - **El reloj es un recurso**: batallas bullet, blitz o rápidas; pociones que suman tiempo, congelan el reloj rival o roban segundos, y monstruos que te los roban a vos.
 - **Objetivos variados**: mate, mate en N, sobrevivir, capturar la dama, capturar N piezas o coronar un peón.
-- **Puzzles** hechos a mano, todos verificados.
-- **Mejoras permanentes** con Coronas: vidas, peones extra, piezas iniciales y más.
+- **15 puzzles** hechos a mano y verificados; los primeros pasos de la run son mayormente puzzles.
+- **Modo Mate Rush**: 3 minutos de mates en 1 generados al azar; cada error cuesta 10 segundos. Superá tu récord y ganá Coronas.
+- **Mejoras permanentes y colección de amuletos** con Coronas: vidas, peones extra, piezas iniciales, y amuletos que se compran una vez y te acompañan en todas las runs.
 - **Inicio amable**: los primeros pasos son batallas de calentamiento.
 - **Guardado automático** y **música chiptune** generada en el navegador.
 - **Español e inglés.**
@@ -95,4 +101,8 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 
 ## Devlog post (optional, for launch)
 
-> **Checkmate Survivors v0.4.0 is out!** A chess roguelite where you start with almost nothing and fight your way through a map of monsters. Each monster has its own playing style, its own themed chess pieces and a lot to say about losing its queen. This early alpha includes Act 1 (7 steps and a boss), 10 monsters, 10 puzzles, potions, relics and permanent upgrades. Tell me what you think!
+> **Checkmate Survivors v0.6.0 is out!** A new quick mode, **Mate Rush**: 3 minutes of random mate-in-one puzzles. Runs now open with puzzles, battles pay more coins, and you can reroll your rewards.
+
+> *(v0.5.0)* **Checkmate Survivors v0.5.0 is out!** Monster traits, a permanent amulet collection, shop rerolls, calmer music in long games and a game that fits any window.
+
+> *(v0.4.0 launch post)* **Checkmate Survivors v0.4.0 is out!** A chess roguelite where you start with almost nothing and fight your way through a map of monsters. Each monster has its own playing style, its own themed chess pieces and a lot to say about losing its queen. This early alpha includes Act 1 (7 steps and a boss), 10 monsters, 10 puzzles, potions, relics and permanent upgrades. Tell me what you think!

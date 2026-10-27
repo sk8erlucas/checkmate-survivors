@@ -1,8 +1,11 @@
 # Checkmate Survivors
 
+**Jugalo en itch.io:** <https://fibonaku.itch.io/checkmate-survivors>
+
 Roguelite de **ajedrez real** en pixel art (HTML5). Empezás con un rey y pocos peones, elegís tu camino por un mapa, enfrentás monstruos animados (cada uno con sus propias piezas temáticas) contra el reloj y mejorás de forma permanente cuando caés. La run se guarda sola entre nodos.
 
 - **Jugar:** abrí `index.html` con doble clic (no necesita servidor ni instalación).
+- **Modos:** Run (el roguelite completo) y **Mate Rush** (3 minutos de mates en 1).
 - **Diseño completo:** [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)
 - **Tests:** `node tests/perft.js`, `node tests/ai.js`, `node tests/scenarios.js`, `node tests/i18n.js`, `node tests/smoke.js`, `node tests/balance.js`
 - **Página de itch.io:** portada, capturas y textos en [`marketing/`](marketing/ITCH_PAGE.md).

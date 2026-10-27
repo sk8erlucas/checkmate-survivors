@@ -28,6 +28,22 @@ UI.init = function () {
   appEl = document.getElementById('app');
   toastBox = h('div', { class: 'toasts' });
   document.body.appendChild(toastBox);
+  UI.fit();
+  if (root.addEventListener) root.addEventListener('resize', UI.fit);
+};
+// Fit the game to small windows (e.g. the itch.io embed when not in fullscreen):
+// the layout is designed for ~1200x740, so smaller viewports zoom the app out.
+UI.fit = function () {
+  if (!appEl || !root.innerWidth) return;
+  const z = Math.max(0.5, Math.min(1, root.innerWidth / 1200, root.innerHeight / 740));
+  appEl.style.zoom = z < 1 ? String(Math.round(z * 100) / 100) : '';
+};
+UI.fullscreen = function () {
+  const d = root.document, el = d.documentElement;
+  try {
+    if (d.fullscreenElement) d.exitFullscreen();
+    else if (el.requestFullscreen) el.requestFullscreen();
+  } catch (e) { /* not allowed in this frame */ }
 };
 UI.screen = function (el) {
   appEl.innerHTML = ''; appEl.appendChild(el); window.scrollTo(0, 0);
@@ -92,6 +108,9 @@ const SFX = {
   win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.14, 'square', 0.05, later(i * 0.1))),
   lose: () => [392, 330, 262, 196].forEach((f, i) => tone(f, 0.18, 'sawtooth', 0.05, later(i * 0.13))),
   warn: () => tone(300, 0.12, 'sawtooth', 0.05),
+  buy: () => { noise(0.05, 0.05, 0, 4000); [784, 988, 1319].forEach((f, i) => tone(f, 0.09, 'square', 0.04, later(0.05 + i * 0.06))); tone(1568, 0.25, 'triangle', 0.05, later(0.23)); },
+  reroll: () => { for (let i = 0; i < 6; i++) tone(300 + i * 90, 0.04, 'square', 0.03, later(i * 0.035)); noise(0.06, 0.04, later(0.2), 3000); },
+  hex: () => { tone(620, 0.3, 'sine', 0.05, 0, 180); tone(930, 0.3, 'sine', 0.03, later(0.05), 270); },
 };
 UI.sfx = function (name) { if (UI.muted || !SFX[name]) return; try { SFX[name](); } catch (e) { /* audio not available */ } };
 
@@ -107,17 +126,27 @@ const TRACKS = {
       [[0, 64, 4], [4, 67, 2], [6, 72, 2], [8, 71, 4], [12, 67, 4]], [[0, 68, 6], [6, 71, 2], [8, 74, 4], [12, 71, 4]],
       [[0, 76, 4], [4, 74, 2], [6, 72, 2], [8, 71, 2], [10, 72, 2], [12, 69, 4]], [[0, 72, 4], [4, 69, 4], [8, 65, 4], [12, 69, 4]],
       [[0, 74, 4], [4, 72, 2], [6, 71, 2], [8, 69, 4], [12, 65, 4]], [[0, 68, 8], [8, 71, 4], [12, 64, 4]]] },
-  battle: { bpm: 132, drums: true,
+  rush: { bpm: 132, drums: true,
     chords: [[38, 62, 65, 69], [46, 58, 62, 65], [48, 60, 64, 67], [45, 61, 64, 69]],
     melody: [
       [[0, 74, 2], [2, 74, 2], [4, 77, 2], [6, 74, 2], [8, 72, 2], [10, 74, 4], [14, 69, 2]], [[0, 70, 4], [4, 72, 2], [6, 74, 2], [8, 77, 4], [12, 74, 4]],
       [[0, 72, 2], [2, 72, 2], [4, 76, 2], [6, 72, 2], [8, 79, 4], [12, 76, 4]], [[0, 73, 6], [6, 76, 2], [8, 81, 4], [12, 79, 2], [14, 76, 2]]] },
+  // calm: rapid games and puzzles, where the clock is long and the music shouldn't rush you
+  calm: { bpm: 80, drums: false, soft: true,
+    chords: [[40, 64, 67, 71], [36, 60, 64, 67], [43, 62, 67, 71], [38, 62, 66, 69]],
+    melody: [
+      [[0, 71, 6], [6, 72, 2], [8, 71, 4], [12, 67, 4]], [[0, 64, 6], [6, 67, 2], [8, 72, 8]],
+      [[0, 74, 4], [4, 71, 4], [8, 67, 4], [12, 71, 4]], [[0, 69, 8], [8, 66, 4], [12, 62, 4]],
+      [[0, 76, 4], [4, 74, 4], [8, 71, 8]], [[0, 72, 4], [4, 71, 2], [6, 69, 2], [8, 67, 8]],
+      [[0, 67, 4], [4, 71, 4], [8, 74, 4], [12, 79, 4]], [[0, 78, 8], [8, 74, 8]]] },
   boss: { bpm: 148, drums: true, four: true,
     chords: [[40, 64, 67, 71], [41, 65, 69, 72], [40, 64, 67, 71], [47, 63, 66, 71]],
     melody: [
       [[0, 76, 2], [2, 77, 2], [4, 76, 2], [6, 74, 2], [8, 76, 8]], [[0, 77, 2], [2, 79, 2], [4, 77, 2], [6, 76, 2], [8, 72, 8]],
       [[0, 71, 2], [2, 72, 2], [4, 74, 2], [6, 76, 2], [8, 79, 4], [12, 77, 4]], [[0, 75, 4], [4, 78, 4], [8, 83, 4], [12, 78, 4]]] },
 };
+TRACKS.battle = Object.assign({}, TRACKS.rush, { bpm: 108 });   // blitz: same tune, relaxed tempo
+TRACKS.boss2 = Object.assign({}, TRACKS.boss, { bpm: 172 });    // the Lich's second phase
 const mus = { name: null, step: 0, next: 0, timer: null };
 function playStep(tr, i, t, sd) {
   const bar = Math.floor(i / 16) % tr.chords.length, st = i % 16, ch = tr.chords[bar];
@@ -130,10 +159,11 @@ function playStep(tr, i, t, sd) {
   } else {
     if (st === 0 || st === 6 || st === 12) tone(hz(ch[0]), sd * 5, 'triangle', 0.09, t);
     if (st === 8) tone(hz(ch[0] + 7), sd * 3, 'triangle', 0.07, t);
-    if (st % 2 === 0) tone(hz(ch[1 + (st / 2) % 3] + 12), sd * 1.5, 'triangle', 0.025, t);
+    if (st % 2 === 0) tone(hz(ch[1 + (st / 2) % 3] + 12), sd * 1.5, 'triangle', tr.soft ? 0.018 : 0.025, t);
+    if (tr.soft && st % 8 === 4) noise(0.03, 0.012, t, 7000);
   }
   const mel = tr.melody[bar % tr.melody.length];
-  for (const [s, n, len] of mel) if (s === st) tone(hz(n), sd * len * 0.92, 'square', 0.036, t);
+  for (const [s, n, len] of mel) if (s === st) tone(hz(n), sd * len * 0.92, tr.soft ? 'triangle' : 'square', tr.soft ? 0.07 : 0.036, t);
 }
 function pump() {
   const a = actx, tr = TRACKS[mus.name];

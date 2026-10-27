@@ -115,6 +115,8 @@ class Match {
     this.started = false; this.over = false; this.thinking = false; this.paused = false; this.frozen = false; this.destroyed = false;
     this.anim = null; this.anim2 = null; this.fx = []; this.fall = null; this.flip = (this.pc === C.BLACK);
     this.faction = SP.FACTIONS[this.enemy.id] ? this.enemy.id : 'rival';
+    this.trait = D.ENEMIES.some(e => e.id === this.enemy.id) ? this.enemy.id : null;   // see TRAITS in docs
+    this.hexed = null; this.petrified = false; this.howled = false; this.phase2 = false;
     this.legalMoves = this.pos.legal();
     this.result = null;
   }
@@ -142,7 +144,8 @@ class Match {
       h('div', { class: 'panel enemy-panel' }, this.avatar.el,
         h('div', { class: 'enemy-name' }, T('enemy.' + en.id + '.name')),
         h('div', { class: 'muted' }, T('style.' + en.style), ' · ', h('span', { style: { color: this.tier.color } }, T('diff.' + en.tier))),
-        en.thief ? h('div', { class: 'muted small' }, T('match.canSteal')) : null),
+        en.thief ? h('div', { class: 'muted small' }, T('match.canSteal')) : null,
+        this.trait ? h('div', { class: 'trait small', title: T('trait.' + this.trait + '.desc') }, '\u2605 ' + T('trait.' + this.trait + '.name')) : null),
       h('div', { class: 'panel' }, h('div', { class: 'panel-title' }, T('match.objective')), e.objText, e.objProg),
       h('div', { class: 'panel grow' }, h('div', { class: 'panel-title' }, T('match.moves')), e.log));
     const center = h('div', { class: 'col center' },
@@ -173,8 +176,9 @@ class Match {
       h('img', { class: 'intro-portrait', src: root.Portraits.url(this.enemy.id, 'idle'), alt: '' }),
       h('h2', null, T('enemy.' + this.enemy.id + '.name')),
       h('div', { class: 'muted' }, T('enemy.' + this.enemy.id + '.desc')),
-      h('p', { class: 'objective' }, T('match.objective') + ': ' + T('obj.' + o.type, { n: o.n })),
-      h('p', null, T('match.time') + ': ' + fmt(this.clock[this.pc]) + (this.inc[this.pc] ? ' +' + this.inc[this.pc] / 1000 + 's' : '')),
+      h('div', { class: 'intro-obj' }, h('div', { class: 'intro-label' }, T('match.objective')), h('div', { class: 'intro-goal' }, T('obj.' + o.type, { n: o.n }))),
+      h('p', { class: 'intro-time' }, T('match.time') + ': ', h('b', null, fmt(this.clock[this.pc]) + (this.inc[this.pc] ? ' +' + this.inc[this.pc] / 1000 + 's' : ''))),
+      this.trait ? h('p', { class: 'intro-trait' }, '\u2605 ', h('b', null, T('trait.' + this.trait + '.name')), ': ' + T('trait.' + this.trait + '.desc')) : null,
       this.cfg.note ? h('p', { class: 'note' }, this.cfg.note) : null,
       h('button', { class: 'btn primary', onclick: () => this.begin() }, T('match.begin'))));
   }
@@ -187,7 +191,11 @@ class Match {
     this.started = true; this.last = performance.now(); this.hideOverlay();
     if (this.cfg.onBegin) this.cfg.onBegin();
     this.avatar.say(line(this.enemy.id, 'intro'), 3200);
-    UI.music(this.enemy.tier === 'boss' ? 'boss' : 'battle');
+    UI.music(this.cfg.music || (this.enemy.tier === 'boss' ? 'boss' : 'battle'));
+    if (this.trait === 'witch' && this.items.length) {
+      this.hexed = this.items[Math.floor(Math.random() * this.items.length)];
+      UI.toast(T('toast.trait.witch', { p: T('item.' + this.hexed + '.name') }), 'bad'); UI.sfx('hex'); this.avatar.taunt(false);
+    }
     this.updateHud();
     if (this.pos.turn === this.ec) this.scheduleAI();
   }
@@ -208,7 +216,8 @@ class Match {
     this.last = now;
     if (!this.started || this.over || this.paused) return;
     const side = this.pos.turn;
-    if (!(side === this.ec && this.frozen)) this.clock[side] -= dt;
+    const ghostly = side === this.ec && this.trait === 'ghost' && this.enemyMoves < 3;
+    if (!(side === this.ec && this.frozen) && !ghostly) this.clock[side] -= dt * (side === this.pc && this.petrified ? 2 : 1);
     if (this.clock[side] <= 0) {
       this.clock[side] = 0;
       if (side === this.pc) this.finish(this.pos.hasMatingMaterial(this.ec) ? { win: false, reason: 'timeout' } : { win: false, reason: 'draw', draw: true });
@@ -275,11 +284,13 @@ class Match {
     const capSq = (fl & C.F_CAP) ? ((fl & C.F_EP) ? to + ((piece >> 3) === C.WHITE ? -8 : 8) : to) : -1;
     const captured = capSq >= 0 ? this.pos.board[capSq] : 0, capType = captured & 7;
     const san = this.pos.san(m);
+    const webbed = byPlayer && this.trait === 'spider' && this.pos.isAttacked(from, this.ec);
     this.pos.make(m);
     this.log.push({ san, mover: byPlayer ? 'p' : 'e', cap: capType, from, to });
     const who = byPlayer ? this.pc : this.ec;
     this.clock[who] += this.inc[who];
-    if (byPlayer) this.playerMoves++; else { this.enemyMoves++; this.frozen = false; }
+    if (byPlayer) { this.playerMoves++; this.petrified = false; } else { this.enemyMoves++; this.frozen = false; }
+    if (webbed) { this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 1000); this.floatText(to, '-1s', '#c8a0ff'); if (!this.webTold) { this.webTold = true; UI.toast(T('toast.trait.spider'), 'bad'); } }
     this.lastMove = { from, to };
     const t0 = performance.now();
     this.anim = { from, to, piece, t0, dur: 160 };
@@ -300,7 +311,15 @@ class Match {
       if (enemyLost) {
         av.hurt(val, SP.pieceURL(e.captured, this.faction)); UI.sfx(val >= 5 ? 'death' : 'hit');
         if ((e.captured & 7) === C.QUEEN) av.say(line(id, 'queen'), 3200);
-      } else { av.taunt(true); UI.sfx('hurt'); }
+        if ((e.captured & 7) === C.QUEEN && this.trait === 'lich' && !this.phase2) this.lichPhase2();
+        if (this.trait === 'werewolf' && !this.howled && this.material(this.ec) * 2 < this.hpMax) {
+          this.howled = true; this.clock[this.ec] += 10000; UI.toast(T('toast.trait.werewolf'), 'bad'); av.taunt(false);
+        }
+      } else {
+        av.taunt(true); UI.sfx('hurt');
+        if (this.trait === 'goblin' && this.cfg.onSteal) { const c = this.cfg.onSteal(2); if (c) UI.toast(T('toast.trait.goblin', { c }), 'bad'); }
+        if (this.trait === 'vampire' && !this.relics.includes('iron')) { this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 2000); this.clock[this.ec] += 2000; this.floatText(e.capSq, '-2s', '#ff5a5a'); }
+      }
     } else UI.sfx('move');
     if (e.castle) { this.floatText(e.to, T('fx.castle'), '#7ac0f0'); UI.sfx('castle'); }
     if (e.promo) {
@@ -316,8 +335,14 @@ class Match {
       if (!e.captured && !e.promo) { if (e.byPlayer) { av.shock(); av.chatty('check', 0.4); } else av.taunt(false); }
     }
   }
+  lichPhase2() {
+    this.phase2 = true; this.avatar.stage.classList.add('phase2'); UI.music('boss2');
+    if (!this.relics.includes('iron')) { const amt = Math.min(8000, Math.max(0, this.clock[this.pc] - 2000)); this.clock[this.pc] -= amt; this.clock[this.ec] += amt; }
+    UI.toast(T('toast.trait.lich'), 'bad'); UI.sfx('warn');
+  }
   afterMove(byPlayer, capType, promoted) {
     const st = this.pos.gameStatus(), o = this.obj;
+    if (!byPlayer && this.trait === 'medusa' && this.enemyMoves === 6) { this.petrified = true; UI.toast(T('toast.trait.medusa'), 'bad'); this.avatar.taunt(false); }
     let res = null;
     if (st.over) {
       if (st.result === 'checkmate') res = st.winner === this.pc ? { win: true, reason: 'mate' } : { win: false, reason: 'mated' };
@@ -369,6 +394,7 @@ class Match {
     const idx = this.items.indexOf(id);
     const useFree = id === 'hint' && free && this.freeHints > 0;
     if (!useFree && idx < 0) return;
+    if (id === this.hexed && !useFree) { UI.toast(T('toast.hexed'), 'bad'); UI.sfx('hex'); return; }
     const consume = () => { if (useFree) this.freeHints--; else this.items.splice(this.items.indexOf(id), 1); };
     switch (id) {
       case 'rewind': {
@@ -469,11 +495,11 @@ class Match {
     for (const it of list) {
       const P = D.POTIONS[it.id];
       e.items.appendChild(h('button', {
-        class: 'item' + (can ? '' : ' disabled'), title: T('item.' + it.id + '.name') + ': ' + T('item.' + it.id + '.desc'),
+        class: 'item' + (can ? '' : ' disabled') + (it.id === this.hexed && !it.free ? ' hexed' : ''), title: T('item.' + it.id + '.name') + ': ' + T('item.' + it.id + '.desc'),
         onclick: () => this.useItem(it.id, it.free),
       }, h('img', { src: SP.iconURL('potion', P.color, { glyph: P.glyph }) }),
         h('span', { class: 'item-name' }, T('item.' + it.id + '.name')),
-        it.n > 1 ? h('span', { class: 'badge' }, it.n) : null, it.free ? h('span', { class: 'badge free' }, T('match.free')) : null));
+        it.id === this.hexed && !it.free ? h('span', { class: 'badge hex' }, T('match.hexed')) : it.n > 1 ? h('span', { class: 'badge' }, it.n) : null, it.free ? h('span', { class: 'badge free' }, T('match.free')) : null));
     }
     this.updateClocks();
   }

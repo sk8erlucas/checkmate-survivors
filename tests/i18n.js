@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path');
 const I = require('../js/i18n.js'), D = require('../js/data.js');
 const keys = new Set();
-for (const f of ['run.js', 'match.js']) {
+for (const f of ['run.js', 'match.js', 'rush.js']) {
   const src = fs.readFileSync(path.join(__dirname, '../js', f), 'utf8');
   for (const m of src.matchAll(/\bT\('([^']+)'/g)) if (!m[1].endsWith('.')) keys.add(m[1]);
 }
@@ -19,7 +19,9 @@ add('enemy.rival.name'); add('enemy.rival.desc');
 for (const id of D.ENEMIES.map(e => e.id).concat('rival')) for (const k of ['intro', 'hurt', 'taunt', 'win', 'lose', 'queen', 'promo', 'check']) add('say.' + id + '.' + k);
 ['piece', 'potion', 'relic', 'coins', 'upgrade'].forEach(k => add('kind.' + k));
 D.SCENARIOS.forEach(s => { add('scenario.' + s.id + '.name'); add('scenario.' + s.id + '.desc'); });
-D.META.forEach(u => { add('meta.' + u.id + '.name'); add('meta.' + u.id + '.desc'); });
+D.META.filter(u => !u.amulet).forEach(u => { add('meta.' + u.id + '.name'); add('meta.' + u.id + '.desc'); });
+D.ENEMIES.forEach(e => { add('trait.' + e.id + '.name'); add('trait.' + e.id + '.desc'); });
+['witch', 'spider', 'werewolf', 'goblin', 'lich', 'medusa'].forEach(t => add('toast.trait.' + t));
 ['pawn', 'knight', 'bishop', 'rook', 'queen'].forEach(p => add('piece.' + p));
 ['mate', 'mated', 'timeout', 'timeoutEnemy', 'queen', 'survived', 'survivedDraw', 'limit', 'resign', 'draw', 'promoted', 'captured'].forEach(r => add('reason.' + r));
 ['duel', 'scenario', 'boss', 'shop', 'event', 'rest'].forEach(n => add('node.' + n));

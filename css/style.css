@@ -105,6 +105,8 @@ h1, h2, h3 { margin: 0.3em 0; letter-spacing: 1px; }
 .card.pick { cursor: pointer; }
 .card.pick:hover:not(.taken), .card.buyable:hover { transform: translateY(-4px); border-color: var(--kc); box-shadow: inset 0 0 0 2px #1a1322, 0 8px 0 #120c1a, 0 0 20px color-mix(in srgb, var(--kc) 45%, transparent); }
 .card.pick:hover:not(.taken) .cardicon img, .card.buyable:hover .cardicon img { animation: floaty 1s ease-in-out infinite; }
+.card.owned { border-color: var(--kc); box-shadow: inset 0 0 0 2px #1a1322, 0 0 18px color-mix(in srgb, var(--kc) 40%, transparent); }
+.card.owned .tag { color: var(--good); }
 .card.taken { opacity: .4; } .card.maxed { opacity: .55; filter: grayscale(.6); }
 @keyframes floaty { 50% { transform: translateY(-5px); } }
 
@@ -212,7 +214,38 @@ h1, h2, h3 { margin: 0.3em 0; letter-spacing: 1px; }
 .tip { color: var(--gold); font-weight: bold; }
 .version { margin-top: 18px; font: bold 12px Consolas, monospace; color: var(--muted); letter-spacing: 1px; opacity: .8; }
 
-@media (max-width: 960px) {
+/* shop price buttons, reroll, traits, intro card */
+.price-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 110px; padding: 7px 16px; font: inherit; font-size: 17px; font-weight: 900; color: #2a1a06;
+  background: linear-gradient(180deg, #ffe08a 0%, #e8b84a 55%, #c8902a 100%); border: 2px solid #1a1022; border-bottom-width: 5px; border-radius: 9px; cursor: pointer;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.55), 0 0 0 2px rgba(232,184,74,.25); transition: transform .06s, filter .1s; }
+.price-btn img { width: 22px; height: 22px; }
+.price-btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-2px); }
+.price-btn:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 3px; }
+.price-btn.cant { cursor: not-allowed; color: #e0a0a8; background: #3a2c4e; border-color: #241a30; box-shadow: none; flex-direction: row; flex-wrap: wrap; }
+.price-btn.cant img { filter: grayscale(1) brightness(.7); }
+.price-btn .need { width: 100%; font-size: 10px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: var(--bad); }
+.btn.reroll { background: #2f4a6a; border-color: #7ac0f0; } .btn.reroll:hover:not(:disabled) { background: #3b5d84; }
+h3.section { margin-top: 18px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; font-size: 15px; }
+.trait { color: #c89aff; font-weight: bold; }
+.objective { color: var(--gold); }
+.overlay-card .intro-obj { margin: 12px auto; padding: 8px 14px; border: 2px solid var(--gold); border-radius: 8px; background: rgba(232,184,74,.12); max-width: 360px; }
+.intro-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.intro-goal { font-size: 20px; font-weight: 900; color: #ffd84a; text-shadow: 2px 2px 0 #3a2808; }
+.intro-time b { color: #7fe0e8; font-family: Consolas, monospace; font-size: 18px; }
+.intro-trait { color: #c89aff; font-size: 13px; max-width: 380px; margin: 8px auto; }
+.item.hexed { opacity: .55; border-color: #9a5fd6; border-style: dashed; }
+.badge.hex { background: #9a5fd6; color: #fff; }
+.avatar-stage.phase2 { box-shadow: 0 0 22px rgba(255,60,60,.7); --tc: #ff3b3b; }
+.avatar-stage.phase2 .portrait { filter: drop-shadow(0 0 7px rgba(255,60,60,.9)); }
+
+/* Mate Rush */
+.rush-bar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 10px; border-color: #e0524f; }
+.rush-title { font-size: 22px; font-weight: 900; letter-spacing: 3px; color: #ff7a6a; text-shadow: 2px 2px 0 #3a0f18; }
+.rush-score { font-size: 20px; } .rush-score b { color: var(--gold); font-size: 26px; }
+.rush .bar .clock { visibility: hidden; }
+.btn.rush-btn { background: #6b2530; border-color: #ff7a6a; } .btn.rush-btn:hover:not(:disabled) { background: #85303d; }
+
+@media (max-width: 640px) {   /* phones only: wider windows are zoomed to fit by UI.fit */
   .avatar-stage { height: 130px; } .portrait { width: 96px; height: 96px; }
   .match { grid-template-columns: 1fr; } .col.center { order: -1; } .movelog { max-height: 90px; }
 }

@@ -84,7 +84,8 @@ function setupFEN(pa, ea) {
 const slotsOf = run => 3 + lvl('slots') + (run.relics.includes('pockets') ? 1 : 0);
 function newRun() {
   const army = { p: 5 + lvl('pawn'), n: lvl('knight') ? 1 : 0, b: lvl('bishop') ? 1 : 0, r: lvl('rook') ? 1 : 0, q: 0 };
-  const run = { army, coins: 20, retries: 1 + lvl('lives'), potions: [], relics: [], map: null, cur: null, stats: { nodes: 0, wins: 0 } };
+  const relics = D.META.filter(u => u.amulet && lvl(u.id)).map(u => u.amulet);
+  const run = { army, coins: 20, retries: 1 + lvl('lives') + (relics.includes('feather') ? 1 : 0), potions: ['hint'], relics, map: null, cur: null, stats: { nodes: 0, wins: 0 } };
   if (lvl('starter')) run.potions.push('hourglass', 'rewind');
   run.map = genMap();
   return run;
@@ -118,6 +119,8 @@ const OBJ_W = {
   normal: { mate: 50, mateIn: 12, survive: 13, captureQueen: 10, capture: 15 },
   hard:   { mate: 55, mateIn: 15, survive: 15, captureQueen: 15 },
 };
+// the first steps are mostly puzzles: a quick, rewarding way into the game
+const PUZZLE_FIRST = [{ duel: 20, scenario: 80 }, { duel: 25, scenario: 50, event: 15, shop: 5, rest: 5 }];
 function genMap() {
   const widths = [3, 2 + rnd(2), 3, 3, 2 + rnd(2), 2, 2, 1];
   const layers = widths.map((w, l) => Array.from({ length: w }, (_, i) => ({ id: l + '-' + i, layer: l, idx: i, next: [], done: false })));
@@ -128,7 +131,7 @@ function genMap() {
     else if (l === 6) types = shuffle(['rest', 'shop']);
     else if (l === 3) types = shuffle(['shop', 'rest', 'duel']);
     else types = nodes.map(() => weighted(l === 0 ? ['duel', 'scenario'] : ['duel', 'scenario', 'event', 'shop', 'rest'],
-      t => ({ duel: l === 0 ? 70 : 55, scenario: l === 0 ? 30 : 16, event: 18, shop: 6, rest: 7 })[t]));
+      t => (PUZZLE_FIRST[l] || { duel: 55, scenario: 16, event: 18, shop: 6, rest: 7 })[t]));
     nodes.forEach((n, i) => {
       n.type = types[i];
       if (n.type === 'duel') {
@@ -174,7 +177,7 @@ function reachable(run) {
 // ------------------------------------------------------------------ rewards
 function coinReward(node) {
   const run = CS.run, tc = D.TIMECTRL[node.tc] || { mult: 1 };
-  return Math.round((12 + node.layer * 3) * D.DIFFS[node.diff].coin * tc.mult * (1 + 0.1 * lvl('purse')) * (run.relics.includes('lucky') ? 1.25 : 1));
+  return Math.round((20 + node.layer * 4) * D.DIFFS[node.diff].coin * tc.mult * (1 + 0.1 * lvl('purse')) * (run.relics.includes('lucky') ? 1.25 : 1));
 }
 function makeRewards(diff) {
   const run = CS.run, opts = [];
@@ -234,6 +237,11 @@ function card(tag, kind, color, ico, title, desc, extra, cls, onclick) {
     h('div', { class: 'card-kind' }, T('kind.' + kind)), h('div', { class: 'cardicon' }, ico),
     h('div', { class: 'card-title' }, title), desc ? h('div', { class: 'card-desc' }, desc) : null, extra);
 }
+function priceBtn(price, can, onclick, crowns) {
+  return h('button', { class: 'price-btn' + (can ? '' : ' cant'), disabled: !can, onclick },
+    h('img', { src: crowns ? SP.iconURL('boss', '#e8b84a') : SP.iconURL('coin', '#f0d060'), alt: '' }), h('b', null, price),
+    can ? null : h('span', { class: 'need' }, T('shop.need')));
+}
 const portrait = (id, cls) => h('img', { class: cls, src: root.Portraits.url(id, 'idle'), alt: '' });
 const NODE_COLOR = { scenario: '#7ac0f0', shop: '#e8b84a', event: '#c58cff', rest: '#ff9f5a', boss: '#b57cff' };
 const nodeColor = n => (n.type === 'duel' || n.type === 'scenario') ? D.DIFFS[n.diff].color : NODE_COLOR[n.type];
@@ -250,6 +258,7 @@ function runHeader() {
     h('div', { class: 'stat' }, coinIcon(), h('b', null, run.coins)),
     h('div', { class: 'stat', title: T('hud.retriesTip') }, icon('heart', '#e87aa8', null, 'chip'), h('b', null, run.retries)),
     army, pots, rel,
+    h('button', { class: 'btn small', onclick: UI.fullscreen }, T('ui.fullscreen')),
     h('button', { class: 'btn small danger', onclick: () => { if (root.confirm(T('hud.confirmAbandon'))) endRun(false); } }, T('hud.abandon')));
 }
 
@@ -267,12 +276,14 @@ function showTitle() {
     h('div', { class: 'menu' },
       saved ? btn(T('title.continue'), continueRun, 'primary') : null,
       btn(T('title.start'), startRunConfirm, saved ? '' : 'primary'),
+      btn(T('title.rush'), () => root.Rush.start(), 'rush-btn'),
       btn(T('title.shop') + '  (' + m.crowns + ' ' + T('crowns') + ')', showMetaShop),
       btn(T('title.how'), showHelp),
       h('div', { class: 'row center' },
         btn(lang === 'en' ? 'Espa\u00f1ol' : 'English', () => { root.I18N.setLang(lang === 'en' ? 'es' : 'en'); saveMeta(); showTitle(); }, 'small'),
         btn(UI.muted ? T('title.soundOff') : T('title.soundOn'), () => { UI.muted = !UI.muted; saveMeta(); showTitle(); }, 'small'),
-        btn(UI.musicOn ? T('title.musicOn') : T('title.musicOff'), () => { UI.musicOn = !UI.musicOn; saveMeta(); showTitle(); }, 'small'))),
+        btn(UI.musicOn ? T('title.musicOn') : T('title.musicOff'), () => { UI.musicOn = !UI.musicOn; saveMeta(); showTitle(); }, 'small'),
+        btn(T('ui.fullscreen'), UI.fullscreen, 'small'))),
     h('div', { class: 'muted small' }, T('title.stats', { runs: m.stats.runs, wins: m.stats.wins, best: m.stats.bestNodes })),
     h('div', { class: 'version' }, T('title.version', { v: D.VERSION }))));
 }
@@ -281,25 +292,28 @@ function showHelp() {
   const md = UI.modal(h('div', null, h('h2', null, T('title.how')), h('ul', { class: 'help' }, items), h('div', { class: 'row center' }, btn(T('close'), () => md.close(), 'primary'))));
 }
 function metaIcon(u) {
+  if (u.amulet) return icon(D.RELICS[u.amulet].shape, D.RELICS[u.amulet].color, null, 'big');
   if (['pawn', 'knight', 'bishop', 'rook'].includes(u.id)) return pieceImg({ pawn: 'p', knight: 'n', bishop: 'b', rook: 'r' }[u.id]);
   const colors = { lives: '#e87aa8', slots: '#a07850', bank: '#e8b84a', purse: '#f0d060', starter: '#58c47a' };
   return icon(u.shape, colors[u.id] || '#e8b84a', u.id === 'starter' ? { glyph: 'hourglass' } : null, 'big');
 }
 function showMetaShop() {
   const m = CS.meta;
-  const cards = D.META.map(u => {
+  const metaCard = u => {
     const L = lvl(u.id), maxed = L >= u.max, cost = u.cost[L], can = !maxed && m.crowns >= cost;
-    return card('div', 'upgrade', null, metaIcon(u), T('meta.' + u.id + '.name'), T('meta.' + u.id + '.desc'), [
-      h('div', { class: 'small lvl' }, T('meta.level', { a: L, n: u.max })),
-      maxed ? h('div', { class: 'tag' }, T('meta.maxed')) :
-        h('button', { class: 'btn small ' + (can ? 'primary' : 'disabled'), disabled: !can, onclick: () => {
-          m.crowns -= cost; m.levels[u.id] = L + 1; saveMeta(); UI.sfx('coin'); showMetaShop();
-        } }, T('meta.buy', { c: cost }))], maxed ? 'maxed' : (can ? 'buyable' : ''));
-  });
+    const name = u.amulet ? T('relic.' + u.amulet + '.name') : T('meta.' + u.id + '.name');
+    const desc = u.amulet === 'feather' ? T('meta.featherDesc') : u.amulet ? T('relic.' + u.amulet + '.desc') + ' ' + T('meta.amuletNote') : T('meta.' + u.id + '.desc');
+    return card('div', u.amulet ? 'relic' : 'upgrade', u.amulet ? D.RELICS[u.amulet].color : null, metaIcon(u), name, desc, [
+      u.amulet ? null : h('div', { class: 'small lvl' }, T('meta.level', { a: L, n: u.max })),
+      maxed ? h('div', { class: 'tag' }, u.amulet ? T('meta.owned') : T('meta.maxed')) :
+        priceBtn(cost, can, () => { m.crowns -= cost; m.levels[u.id] = L + 1; saveMeta(); UI.sfx('buy'); showMetaShop(); }, true)], maxed ? (u.amulet ? 'owned' : 'maxed') : (can ? 'buyable' : ''));
+  };
+  const owned = D.META.filter(u => lvl(u.id) >= u.max).length;
   UI.screen(h('div', { class: 'screen' },
     h('div', { class: 'row between' }, h('h2', null, T('title.shop')), h('div', { class: 'stat' }, icon('boss', '#e8b84a', null, 'chip'), h('b', null, m.crowns + ' ' + T('crowns')))),
-    h('p', { class: 'muted' }, T('meta.intro')),
-    h('div', { class: 'grid' }, cards),
+    h('p', { class: 'muted' }, T('meta.intro') + ' ' + T('meta.progress', { a: owned, n: D.META.length })),
+    h('h3', { class: 'section' }, T('meta.upgrades')), h('div', { class: 'grid' }, D.META.filter(u => !u.amulet).map(metaCard)),
+    h('h3', { class: 'section' }, T('meta.amulets')), h('p', { class: 'muted small' }, T('meta.amuletsIntro')), h('div', { class: 'grid' }, D.META.filter(u => u.amulet).map(metaCard)),
     h('div', { class: 'row center' }, btn(T('back'), showTitle))));
 }
 
@@ -399,6 +413,7 @@ function openNode(n) {
   if (n.type === 'duel' || n.type === 'boss') {
     const tc = D.TIMECTRL[n.tc], e = D.ENEMIES.find(x => x.id === n.enemyId);
     row(T('node.opponent'), T('enemy.' + e.id + '.name') + ' (' + T('style.' + e.style) + ')');
+    row(T('node.trait'), h('span', { class: 'trait', title: T('trait.' + e.id + '.desc') }, T('trait.' + e.id + '.name') + ': ' + T('trait.' + e.id + '.desc')));
     row(T('node.difficulty'), h('span', { style: { color: D.DIFFS[n.diff].color } }, T('diff.' + n.diff)));
     row(T('match.objective'), T('obj.' + n.objType, { n: objN(n.objType, n.diff) }));
     row(T('match.time'), tc.base + 's' + (tc.inc ? ' +' + tc.inc + 's' : '') + '  (' + T('tc.' + n.tc) + ')');
@@ -435,6 +450,8 @@ function timeFor(baseSec, incSec) {
     playerInc: (incSec + (run.relics.includes('charm') ? 1 : 0)) * 1000, enemyInc: incSec * 1000,
   };
 }
+// long clocks get calm music; only bullet games get the fast track
+const TC_MUSIC = { rapid: 'calm', blitz: 'battle', bullet: 'rush' };
 function startDuel(n) {
   const run = CS.run, df = D.DIFFS[n.diff], tc = D.TIMECTRL[n.tc], e = D.ENEMIES.find(x => x.id === n.enemyId);
   const pv = armyValue(run.army);
@@ -442,12 +459,15 @@ function startDuel(n) {
   const budget = Math.max(2, Math.round(pv * bf[0] + bf[1]));
   const objType = (n.objType === 'captureQueen' && budget < 12) || (n.objType === 'promote' && !run.army.p) ? 'mate' : n.objType;
   const ea = buildEnemyArmy(budget, objType === 'captureQueen');
+  if (e.id === 'skeleton' && ea.p < D.MAX_ARMY.p) ea.p++;   // trait: wall of bones
   const pieces = D.PIECE_ORDER.reduce((t, k) => t + ea[k], 0);
   launchMatch({
     fen: setupFEN(run.army, ea), playerColor: 0,
     enemy: Object.assign({ id: e.id, style: e.style, tier: n.diff, thief: e.thief || 0, hourglass: e.hourglass || 0 }, n.intro ? { depth: D.INTRO.depth, blunder: D.INTRO.blunder } : {}),
     objective: { type: objType, n: objType === 'capture' ? Math.min(objN(objType, n.diff), pieces) : objN(objType, n.diff) }, time: timeFor(tc.base, tc.inc),
     note: T('match.armyNote', { you: armyStr(run.army), foe: armyStr(ea) }),
+    music: n.diff === 'boss' ? 'boss' : TC_MUSIC[n.tc],
+    onSteal: c => { const t = Math.min(c, run.coins); run.coins -= t; return t; },
   }, n);
 }
 function startScenario(n) {
@@ -455,7 +475,7 @@ function startScenario(n) {
   launchMatch({
     fen: sc.fen, playerColor: pos.turn,
     enemy: { id: 'rival', style: sc.style, tier: sc.diff, thief: 0, hourglass: 0 },
-    objective: sc.obj, time: timeFor(sc.time, 0), note: T('scenario.' + sc.id + '.desc'),
+    objective: sc.obj, time: timeFor(sc.time, 0), note: T('scenario.' + sc.id + '.desc'), music: 'calm',
   }, n);
 }
 function launchMatch(cfg, node, itemsOverride) {
@@ -532,43 +552,51 @@ function showRewards(node) {
   const p = run.pending;
   if (!p.rewards) { p.rewards = makeRewards(node.diff); p.left = node.diff === 'hard' ? 2 : 1; saveRun(); }
   const info = h('p', { class: 'muted' }, T('reward.pick', { n: p.left }));
+  p.rerolls = p.rerolls || 0;
+  const rc = rerollCost(p.rerolls), canReroll = run.coins >= rc && !p.rewards.some(o => o.taken);
+  const reroll = h('button', { class: 'btn reroll' + (canReroll ? '' : ' disabled'), disabled: !canReroll, onclick: () => {
+    run.coins -= rc; p.rerolls++; p.rewards = makeRewards(node.diff); saveRun(); UI.sfx('reroll'); showRewards(node);
+  } }, rc ? T('shop.reroll', { c: rc }) : T('shop.rerollFree'));
   const cards = h('div', { class: 'grid' }, p.rewards.map(o => rewardCard(o, () => {
     if (p.left <= 0) return;
-    o.taken = true; applyReward(o); UI.sfx('coin'); p.left--; info.textContent = T('reward.pick', { n: p.left }); saveRun();
+    o.taken = true; applyReward(o); UI.sfx('buy'); p.left--; info.textContent = T('reward.pick', { n: p.left }); saveRun();
     if (p.left <= 0) setTimeout(() => completeNode(node), 450);
   })));
-  UI.screen(h('div', { class: 'screen' }, runHeader(), h('h2', null, T('reward.title')), info, cards,
+  UI.screen(h('div', { class: 'screen' }, runHeader(), h('div', { class: 'row between' }, h('h2', null, T('reward.title')), reroll), info, cards,
     h('div', { class: 'row center' }, btn(T('reward.skip'), () => { run.coins += 5; completeNode(node); }, 'small'))));
 }
+function makeStock(run) {
+  const pieces = [];
+  if (run.army.p < D.MAX_ARMY.p) pieces.push('p');
+  const other = ['n', 'b', 'r'].filter(k => run.army[k] < D.MAX_ARMY[k]);
+  if (other.length) pieces.push(pickOne(other));
+  if (run.army.q < 1 && chance(0.35)) pieces.push('q');
+  const rl = unownedRelics(run);
+  return { potions: [0, 1, 2].map(() => ({ id: randomPotion() })), relic: rl.length ? { id: pickOne(rl) } : null, pieces: pieces.map(k => ({ k })) };
+}
+const rerollCost = k => (k ? 10 * k : 0);       // 1st reroll free, then 10, 20, 30...
 function showShop(n) {
   const run = CS.run;
-  if (!n.stock) {
-    const pieces = [];
-    if (run.army.p < D.MAX_ARMY.p) pieces.push('p');
-    const other = ['n', 'b', 'r'].filter(k => run.army[k] < D.MAX_ARMY[k]);
-    if (other.length) pieces.push(pickOne(other));
-    if (run.army.q < 1 && chance(0.35)) pieces.push('q');
-    const rl = unownedRelics(run);
-    n.stock = { potions: [0, 1, 2].map(() => ({ id: randomPotion() })), relic: rl.length ? { id: pickOne(rl) } : null, pieces: pieces.map(k => ({ k })) };
-  }
+  if (!n.stock) { n.stock = makeStock(run); n.rerolls = n.rerolls || 0; }
   const S = n.stock;
   const buy = (entry, price, apply) => {
-    if (entry.sold) return;
-    if (run.coins < price) { UI.toast(T('shop.noCoins'), 'bad'); return; }
-    if (!apply()) return;
-    run.coins -= price; entry.sold = true; UI.sfx('coin'); showShop(n);
+    if (entry.sold || run.coins < price || !apply()) return;
+    run.coins -= price; entry.sold = true; UI.sfx('buy'); showShop(n);
   };
   const shopCard = (entry, kind, color, ico, title, desc, price, apply) => card('div', kind, color, ico, title, desc,
-    entry.sold ? h('div', { class: 'tag' }, T('shop.sold')) :
-      h('button', { class: 'btn small ' + (run.coins >= price ? 'primary' : 'disabled'), onclick: () => buy(entry, price, apply) }, price + ' ' + T('coins')),
+    entry.sold ? h('div', { class: 'tag' }, T('shop.sold')) : priceBtn(price, run.coins >= price, () => buy(entry, price, apply)),
     entry.sold ? 'maxed' : (run.coins >= price ? 'buyable' : ''));
   const cards = [];
   for (const e of S.potions) cards.push(shopCard(e, 'potion', D.POTIONS[e.id].color, potionIcon(e.id), T('item.' + e.id + '.name'), T('item.' + e.id + '.desc'), D.POTIONS[e.id].price,
     () => { if (run.potions.length >= slotsOf(run)) { UI.toast(T('shop.bagFull'), 'bad'); return false; } run.potions.push(e.id); return true; }));
   if (S.relic) cards.push(shopCard(S.relic, 'relic', D.RELICS[S.relic.id].color, relicIcon(S.relic.id), T('relic.' + S.relic.id + '.name'), T('relic.' + S.relic.id + '.desc'), D.RELICS[S.relic.id].price, () => { addRelic(S.relic.id); return true; }));
   for (const e of S.pieces) cards.push(shopCard(e, 'piece', null, pieceImg(e.k), T('piece.' + PIECE_NAME[e.k]), T('reward.piece'), D.PRICE[e.k], () => { run.army[e.k]++; return true; }));
+  const rc = rerollCost(n.rerolls), canReroll = run.coins >= rc;
+  const reroll = h('button', { class: 'btn reroll' + (canReroll ? '' : ' disabled'), disabled: !canReroll, onclick: () => {
+    run.coins -= rc; n.rerolls++; n.stock = makeStock(run); UI.sfx('reroll'); showShop(n);
+  } }, rc ? T('shop.reroll', { c: rc }) : T('shop.rerollFree'));
   saveRun();
-  UI.screen(h('div', { class: 'screen' }, runHeader(), h('h2', null, T('node.shop')), h('p', { class: 'muted' }, T('shop.intro')),
+  UI.screen(h('div', { class: 'screen' }, runHeader(), h('div', { class: 'row between' }, h('div', null, h('h2', null, T('node.shop')), h('p', { class: 'muted' }, T('shop.intro'))), reroll),
     h('div', { class: 'grid' }, cards), h('div', { class: 'row center' }, btn(T('shop.leave'), () => completeNode(n), 'primary')), sidePanel()));
 }
 function showEvent(n) {
@@ -630,6 +658,7 @@ function showSplash() {
     h('div', { class: 'blink' }, T('title.clickToStart')),
     h('div', { class: 'version' }, T('title.version', { v: D.VERSION }))));
 }
+CS.saveMeta = saveMeta; CS.showTitle = showTitle;   // used by the Mate Rush mode (rush.js)
 CS.init = function () { loadMeta(); if (UI.audioAvailable()) showSplash(); else showTitle(); };
 CS._test = { continueRun, savedRun, genMap, buildEnemyArmy, setupFEN, newRun, armyValue, makeRewards, EVENTS, reachable };
 })(window);

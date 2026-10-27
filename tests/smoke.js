@@ -40,7 +40,7 @@ const ctx = {
   confirm: () => true, scrollTo() {}, requestAnimationFrame: fn => realST(fn, 16), cancelAnimationFrame: clearTimeout,
 };
 ctx.window = ctx; vm.createContext(ctx);
-for (const f of ['chess', 'ai', 'sprites', 'portraits', 'data', 'i18n', 'ui', 'match', 'run', 'main']) vm.runInContext(fs.readFileSync(path.join(rootDir, 'js', f + '.js'), 'utf8'), ctx, { filename: f + '.js' });
+for (const f of ['chess', 'ai', 'sprites', 'portraits', 'data', 'i18n', 'ui', 'match', 'run', 'rush', 'main']) vm.runInContext(fs.readFileSync(path.join(rootDir, 'js', f + '.js'), 'utf8'), ctx, { filename: f + '.js' });
 const { CS, Chess: C, AI, Data: D, I18N } = ctx;
 
 let fail = 0;
@@ -154,14 +154,16 @@ async function fullRun(first) {
       else { findBtn('End run').click(); ended = true; }
     } else if (node.type === 'shop') {
       CS.run.coins = 400;
-      const buy = buttons().filter(b => b.className.includes('primary') && b.textContent.includes('coins'));
+      const r0 = buttons().find(b => b.className.includes('reroll')); const c0 = CS.run.coins; r0.click();
+      ok(CS.run.coins === c0 && buttons().find(b => b.className.includes('reroll')).textContent.includes('10'), 'shop reroll: first one free, the next costs coins');
+      const buy = buttons().filter(b => b.className.includes('price-btn') && !b.disabled);
       buy.slice(0, 2).forEach(b => b.click());
       findBtn('Leave').click();
     } else if (node.type === 'event') {
-      const c = buttons().find(b => b.className.includes('btn') && !b.disabled && !b.textContent.includes('Abandon')); c.click();
+      const c = buttons().find(b => b.className.includes('btn') && !b.disabled && !b.textContent.includes('Abandon') && !b.textContent.includes('Fullscreen')); c.click();
       findBtn('Continue').click();
     } else if (node.type === 'rest') {
-      const c = buttons().find(b => b.className.includes('btn') && !b.disabled && !b.textContent.includes('Abandon')); c.click();
+      const c = buttons().find(b => b.className.includes('btn') && !b.disabled && !b.textContent.includes('Abandon') && !b.textContent.includes('Fullscreen')); c.click();
     }
     if (!ended) ok(pageText().includes('Choose your path') || pageText().includes('RUN OVER'), 'back on the map after ' + node.type);
     if (pageText().includes('RUN OVER')) ended = true;
@@ -175,7 +177,7 @@ async function endAndLanguage() {
   findBtn('Permanent Shop').click();
   ok(pageText().includes('Extra Life'), 'permanent shop renders');
   const before = CS.meta.crowns; CS.meta.crowns += 500;
-  const buy = buttons().find(b => b.textContent.includes('Buy') && !b.disabled); buy.click();
+  const buy = buttons().find(b => b.className.includes('price-btn') && !b.disabled); buy.click();
   ok(Object.keys(CS.meta.levels).length === 1 && CS.meta.crowns < before + 500, 'buying a permanent upgrade works and persists');
   ok(JSON.parse(ctx.localStorage.getItem('checkmate_survivors_v1')).levels, 'progress saved to localStorage');
   findBtn('Back').click(); findBtn('Espa').click();
@@ -183,6 +185,9 @@ async function endAndLanguage() {
   findBtn('Comenzar partida').click();
   ok(pageText().includes('Elegí tu camino'), 'run starts in Spanish with the upgrade applied (extra start army/retries)');
   ok(CS.run.retries + CS.run.army.p + CS.run.army.n + CS.run.army.b + CS.run.army.r > 4, 'permanent upgrade affects the new run');
+  CS.meta.levels.am_iron = 1; CS.meta.levels.am_feather = 1;
+  const rr = CS._test.newRun(); ok(rr.relics.includes('iron') && rr.relics.includes('feather') && rr.retries >= 2, 'permanent amulets start every run (feather also adds a Retry)');
+  delete CS.meta.levels.am_iron; delete CS.meta.levels.am_feather;
   // save / continue: a "reload" brings the run back; leaving mid-battle costs a Retry
   const coins = CS.run.coins + 7; CS.run.coins = coins;
   const n0 = CS.run.map.layers[0][0];
@@ -208,12 +213,44 @@ async function objectives() {
   play(m, 'b7b8'); ok(m.over && m.result.win && m.result.reason === 'promoted', 'promote objective: promoting a pawn wins');
   ok(m.faction === 'spider' && m.fx.length > 0, 'enemy pieces use the opponent faction and promotion spawns board effects');
   m.destroy();
+  m.destroy();
+  let stolen = 0;
+  const mk2 = (id, fen, items) => { const x = new ctx.Match({ fen, playerColor: 0, enemy: { id, style: 'balanced', tier: 'easy', depth: 1, blunder: 0 }, objective: { type: 'mate', n: 0 },
+    time: { playerMs: 60000, enemyMs: 60000, playerInc: 0, enemyInc: 0 }, items: items || [], relics: [], onEnd() {}, onSteal: c => (stolen += c, c) }); x.mount(new N('div')); x.begin(); return x; };
+  m = mk2('witch', '4k3/8/8/8/8/8/8/4K3 w - - 0 1', ['hourglass']);
+  ok(m.hexed === 'hourglass', 'witch trait hexes one of your potions');
+  m.useItem('hourglass'); ok(m.items.includes('hourglass'), 'a hexed potion cannot be used'); m.destroy();
+  m = mk2('goblin', '4k3/8/8/8/8/2p5/1P6/4K3 b - - 0 1'); m.scheduleAI = () => {};
+  m.doMove(m.legalMoves.find(x => C.sqName(C.mTo(x)) === 'b2'), false); ok(stolen === 2, 'goblin trait steals coins when it captures'); m.destroy();
+  m = mk2('spider', '4k3/8/8/8/2b5/8/4P3/4K3 w - - 0 1'); m.scheduleAI = () => {}; const before = m.clock[0];
+  play(m, 'e2e3'); ok(m.clock[0] <= before - 1000, 'spider trait: moving an attacked piece costs a second'); m.destroy();
   m = mk('4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1', { type: 'capture', n: 1 });
   play(m, 'e4d5'); ok(m.over && m.result.reason === 'captured', 'capture objective: capturing N pieces wins');
   m.destroy();
 }
+async function rushMode() {
+  const R = ctx.Rush;
+  let bad = 0;
+  for (let lv = 0; lv < 16; lv++) for (let i = 0; i < 3; i++) {
+    const pz = R.generate(lv), pos = C.Position.fromFEN(pz.fen);
+    const mates = pos.legal().filter(m => { pos.make(m); const st = pos.gameStatus(); pos.unmake(); return st.result === 'checkmate'; });
+    if (!mates.length || pos.inCheck(1) || pos.inCheck(0)) bad++;
+  }
+  ok(bad === 0, 'Mate Rush generator: 48 random puzzles, all legal with a mate in one');
+  const crowns0 = CS.meta.crowns;
+  R.start(); await sleep(10);
+  let m = CS.match || R.state.match; ok(!!m && pageText().includes('MATE RUSH'), 'Mate Rush starts with a puzzle on the board');
+  const mate = m.legalMoves.find(x => { m.pos.make(x); const st = m.pos.gameStatus(); m.pos.unmake(); return st.result === 'checkmate'; });
+  m.playerMove(mate); await waitFor(() => R.state.score === 1, 3000, 'rush score');
+  ok(R.state.score === 1, 'solving a mate scores a point and loads the next puzzle');
+  m = R.state.match; const left = R.state.left;
+  const wrong = m.legalMoves.find(x => { m.pos.make(x); const st = m.pos.gameStatus(); m.pos.unmake(); return !st.over; });
+  m.playerMove(wrong); await waitFor(() => R.state.left < left - 9000, 3000, 'rush penalty');
+  ok(R.state.score === 1, 'a wrong move costs 10 seconds');
+  R.finish(); ok(CS.meta.crowns > crowns0 && CS.meta.stats.rushBest === 1 && pageText().includes("TIME'S UP"), 'finishing Mate Rush pays Crowns and saves the best score');
+}
 (async () => {
-  try { structural(); await objectives(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
+  try { structural(); await objectives(); await rushMode(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
   console.log(fail ? `\n${fail} FAILURES` : '\nALL SMOKE TESTS PASSED');
   process.exit(fail ? 1 : 0);
 })();

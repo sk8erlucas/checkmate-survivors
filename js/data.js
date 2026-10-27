@@ -7,7 +7,7 @@
 'use strict';
 const D = {};
 
-D.VERSION = '0.4.0';        // shown on the title screen (early alpha)
+D.VERSION = '0.6.0';        // shown on the title screen (early alpha)
 
 D.TYPE = { p: 1, n: 2, b: 3, r: 4, q: 5 };            // chess.js piece types
 D.MAX_ARMY = { p: 8, n: 2, b: 2, r: 2, q: 1 };         // never exceed a standard army
@@ -38,9 +38,9 @@ D.RELICS = {
 
 // difficulty tiers (AI strength, pieces budget relative to the player, reward)
 D.DIFFS = {
-  easy:   { coin: 1.0, depth: 1, blunder: 0.40, timeMs: 120, budget: [0.50, 0], color: '#6fcf7a' },
-  normal: { coin: 1.5, depth: 2, blunder: 0.20, timeMs: 200, budget: [0.75, 0], color: '#e8c84a' },
-  hard:   { coin: 2.2, depth: 3, blunder: 0.10, timeMs: 300, budget: [0.95, 1], color: '#e0524f' },
+  easy:   { coin: 1.0, depth: 1, blunder: 0.50, timeMs: 120, budget: [0.50, 0], color: '#6fcf7a' },
+  normal: { coin: 1.5, depth: 2, blunder: 0.30, timeMs: 200, budget: [0.70, 0], color: '#e8c84a' },
+  hard:   { coin: 2.2, depth: 3, blunder: 0.15, timeMs: 300, budget: [0.90, 1], color: '#e0524f' },
   boss:   { coin: 4.0, depth: 4, blunder: 0.03, timeMs: 500, budget: [1.1, 2],  color: '#b57cff' },
 };
 // the first steps of a run are warm-ups: weaker AI, smaller army, gentle objectives
@@ -73,6 +73,11 @@ D.ENEMIES = [
 
 // ready-made positions, all validated by tests/scenarios.js (exhaustive mate solver)
 D.SCENARIOS = [
+  { id: 'queenkiss',  diff: 'easy',   fen: '6k1/5ppp/8/8/8/8/5PPP/4Q1K1 w - - 0 1',          obj: { type: 'mateIn', n: 1 },        time: 60,  style: 'balanced' },
+  { id: 'rookedge',   diff: 'easy',   fen: 'k7/8/1K6/8/8/8/8/7R w - - 0 1',                  obj: { type: 'mateIn', n: 1 },        time: 60,  style: 'balanced' },
+  { id: 'arabian',    diff: 'easy',   fen: '7k/7p/5N2/8/8/8/8/6RK w - - 0 1',                obj: { type: 'mateIn', n: 1 },        time: 60,  style: 'balanced' },
+  { id: 'rookroller', diff: 'easy',   fen: '6k1/8/8/8/8/8/R7/1R4K1 w - - 0 1',               obj: { type: 'mateIn', n: 2 },        time: 60,  style: 'balanced' },
+  { id: 'knightfork', diff: 'easy',   fen: 'q3k3/8/8/1N6/8/8/8/4K3 w - - 0 1',               obj: { type: 'captureQueen', n: 2 }, time: 60,  style: 'balanced' },
   { id: 'smothered', diff: 'easy',   fen: '6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1',            obj: { type: 'mateIn', n: 2 },        time: 40,  style: 'balanced' },
   { id: 'backrank',  diff: 'easy',   fen: '6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1',         obj: { type: 'mateIn', n: 2 },        time: 40,  style: 'balanced' },
   { id: 'fork',      diff: 'easy',   fen: '3q3k/6pp/8/4N3/8/8/8/6K1 w - - 0 1',            obj: { type: 'captureQueen', n: 2 }, time: 45,  style: 'balanced' },
@@ -96,6 +101,14 @@ D.META = [
   { id: 'bank',    max: 3, cost: [15, 45, 110],  shape: 'watch' },
   { id: 'purse',   max: 3, cost: [20, 50, 110],  shape: 'coin' },
   { id: 'starter', max: 1, cost: [25],           shape: 'potion' },
+  // amulets: buy a relic once and start every run with it (owning all = full collection)
+  { id: 'am_iron',    amulet: 'iron',    max: 1, cost: [40] },
+  { id: 'am_watch',   amulet: 'watch',   max: 1, cost: [50] },
+  { id: 'am_charm',   amulet: 'charm',   max: 1, cost: [60] },
+  { id: 'am_pockets', amulet: 'pockets', max: 1, cost: [70] },
+  { id: 'am_lucky',   amulet: 'lucky',   max: 1, cost: [80] },
+  { id: 'am_eye',     amulet: 'eye',     max: 1, cost: [90] },
+  { id: 'am_feather', amulet: 'feather', max: 1, cost: [120] },
 ];
 
 const api = D;
