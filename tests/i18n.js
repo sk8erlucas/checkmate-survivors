@@ -33,6 +33,8 @@ for (let i = 1; i <= 9; i++) add('help.' + i);
 const evs = { gambler: ['bet', 'leave', 'won', 'lost'], clockmaker: ['buy', 'trade', 'leave', 'bought', 'traded'], hermit: ['pay', 'leave', 'paid'], well: ['drink', 'leave', 'potion', 'coins', 'bad'], broker: ['sell', 'buy', 'leave', 'sold', 'bought'] };
 for (const [id, parts] of Object.entries(evs)) { add('event.' + id + '.title'); add('event.' + id + '.desc'); for (const p of parts) add('event.' + id + (['won','lost','bought','traded','paid','potion','coins','bad','sold'].includes(p) && !(id==='clockmaker'&&p==='buy'||id==='broker'&&p==='buy') ? '.res.' : '.') + p); }
 add('event.res.left');
+for (const id of ['cauldron', 'mirror', 'golem']) ['title', 'desc'].forEach(k => add('event.' + id + '.' + k));
+['cauldron.brew', 'cauldron.drink', 'cauldron.leave', 'cauldron.res.brewed', 'cauldron.res.drank', 'mirror.look', 'mirror.leave', 'mirror.res.copy', 'mirror.res.cursed', 'golem.pry', 'golem.sneak', 'golem.res.gem', 'golem.res.woke', 'golem.res.wokeCoins', 'golem.res.sneaked'].forEach(k => add('event.' + k));
 let miss = 0;
 for (const lang of ['en', 'es']) for (const k of keys) if (I.DICT[lang][k] === undefined) { miss++; console.log('MISSING', lang, k); }
 // placeholders must match between languages

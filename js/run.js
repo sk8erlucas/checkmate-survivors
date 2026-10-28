@@ -237,6 +237,17 @@ const PIECE_NAME = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' 
 
 // ------------------------------------------------------------------ events
 const EVENTS = {
+  // monster encounters: `portrait` shows the monster on the event screen
+  cauldron: { portrait: 'witch', choices: [
+    { id: 'brew', need: r => r.coins >= 15, apply(r) { r.coins -= 15; addPotion(randomPotion()); addPotion(randomPotion()); return 'brewed'; } },
+    { id: 'drink', need: r => r.army.p >= 2, apply(r) { r.army.p--; r.retries++; return 'drank'; } },
+    { id: 'leave', apply() { return 'left'; } } ] },
+  mirror: { portrait: 'ghost', choices: [
+    { id: 'look', apply(r) { if (chance(0.5)) { addPotion(r.potions.length ? pickOne(r.potions) : randomPotion()); return 'copy'; } r.coins = Math.max(0, r.coins - 10); return 'cursed'; } },
+    { id: 'leave', apply() { return 'left'; } } ] },
+  golem: { portrait: 'golem', choices: [
+    { id: 'pry', apply(r) { if (chance(0.6)) { r.coins += 50; return 'gem'; } if (r.retries > 0) { r.retries--; return 'woke'; } r.coins = Math.max(0, r.coins - 15); return 'wokeCoins'; } },
+    { id: 'sneak', apply(r) { r.coins += 5; return 'sneaked'; } } ] },
   gambler: { choices: [
     { id: 'bet', need: r => r.coins >= 20, apply(r) { if (chance(0.5)) { r.coins += 40; return 'won'; } r.coins -= 20; return 'lost'; } },
     { id: 'leave', apply() { return 'left'; } } ] },
@@ -807,17 +818,18 @@ function showShop(n) {
 }
 function showEvent(n) {
   const run = CS.run, ev = EVENTS[n.eventId];
+  const face = ev.portrait ? portrait(ev.portrait, 'big-portrait') : null;
   const choices = ev.choices.map(c => {
     const ok = !c.need || c.need(run);
     return h('button', { class: 'btn ' + (ok ? '' : 'disabled'), disabled: !ok, onclick: () => {
       UI.sfx('click');
       const r = c.apply(run), msg = r === 'left' ? T('event.res.left') : T('event.' + n.eventId + '.res.' + r);
       setPending('done', n);
-      UI.screen(h('div', { class: 'screen center-screen' }, runHeader(), h('h2', null, T('event.' + n.eventId + '.title')), h('p', null, msg),
+      UI.screen(h('div', { class: 'screen center-screen' }, runHeader(), face, h('h2', null, T('event.' + n.eventId + '.title')), h('p', null, msg),
         h('div', { class: 'row center' }, btn(T('result.continue'), () => completeNode(n), 'primary'))));
     } }, T('event.' + n.eventId + '.' + c.id));
   });
-  UI.screen(h('div', { class: 'screen center-screen' }, runHeader(), h('h2', null, T('event.' + n.eventId + '.title')),
+  UI.screen(h('div', { class: 'screen center-screen' }, runHeader(), face, h('h2', null, T('event.' + n.eventId + '.title')),
     h('p', null, T('event.' + n.eventId + '.desc')), h('div', { class: 'column' }, choices)));
 }
 function showRest(n) {

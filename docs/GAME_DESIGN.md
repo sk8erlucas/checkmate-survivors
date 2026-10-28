@@ -1,7 +1,7 @@
 # Checkmate Survivors — Documento de diseño
 
 > Roguelite 2D de **ajedrez real** en pixel art. HTML5 + JavaScript puro, pensado para subirse a **itch.io**.
-> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.10.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
+> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.10.1 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
 > **Publicado** en itch.io: <https://fibonaku.itch.io/checkmate-survivors>
 
 ---
@@ -76,7 +76,7 @@ Probabilidad de dificultad por paso (fácil / normal / difícil): paso 1 100/0/0
 - **Mate Rush** (bonus): 60 s de mates en 1 seguidos; cada mate da monedas (sección 17).
 - **Élite** (pasos 5–6, opcional): un monstruo difícil con su rasgo; paga ×1.3 monedas y el premio siempre incluye un amuleto (si quedan). Se marca con una etiqueta roja "Élite".
 - **Arena**: 3 duelos cortos seguidos; cada victoria paga en el momento, podés retirarte entre rondas y perder solo termina la Arena (sección 17).
-- **Evento**: decisiones con riesgo (El Apostador, El Viejo Relojero, El Ermitaño, El Pozo Extraño, El Prestamista).
+- **Evento**: decisiones con riesgo (El Apostador, El Viejo Relojero, El Ermitaño, El Pozo Extraño, El Prestamista) y **encuentros con monstruos** (v0.10.1, con el retrato del monstruo): *El caldero de Hexa* (15 monedas por 2 pociones, o un peón por +1 Reintento), *El espejo embrujado* (50%: copia una poción / 50%: −10 monedas) y *El gólem dormido* (arrancar la gema: 60% +50 monedas, si no −1 Reintento o −15 monedas; pasar despacio: +5).
 - **Fogata**: elegir una: +1 Reintento (máx. 3), +1 peón, o una poción.
 - **Jefe**: al vencerlo se completa el acto y la run termina en victoria.
 
@@ -328,7 +328,7 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 
 ---
 
-## 11. Estado (v0.10.0 · Early Alpha) y hoja de ruta
+## 11. Estado (v0.10.1 · Early Alpha) y hoja de ruta
 
 **Hecho:** motor completo, IA con 6 estilos, mapa ramificado, 4 tipos de objetivo, relojes, 6 pociones, 7 reliquias, 5 eventos, tienda, fogata, jefe, 10 puzzles, tienda permanente, guardado, EN/ES, sonido.
 **v0.2:** retratos animados de rivales con barra de vida, daño, reacciones y frases; nueva dama; tarjetas rediseñadas; guardar/continuar run.
@@ -340,11 +340,12 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 **v0.8.0:** **resolución fija de 1280×720** escalada a la ventana, con scroll interno (arregla tiendas y pantallas largas que no se podían recorrer, sección 18); nodo **Arena**; **historial de runs** (paso alcanzado y quién te venció) para balancear, con la última run en el menú.
 **v0.9.0:** **16 logros** (pagan Coronas); **Run del día** con mapa fijo por fecha; nodo **Élite**; pantalla de **Opciones** (sonido, música, menos animaciones, piezas enemigas clásicas); el mapa ya no repite nodos no combativos ni monstruos en caminos conectados.
 **v0.10.0:** **Acto 2, Las Catacumbas** (sección 14): 4 monstruos nuevos y el jefe **Nigromante**, gran fogata entre actos y la opción de retirarse victorioso o seguir.
+**v0.10.1:** 3 eventos con monstruos (caldero de Hexa, espejo embrujado, gólem dormido).
 
 **Pendiente / ideas (por prioridad):**
 1. **Acto 3, El Castillo** (sección 14): gárgola ya existe; faltan dragón joven, caballero sin cabeza, súcubo, kraken y el jefe Rey Sombra. Además, tema musical propio por acto y Mate Rush de mates en 2.
 2. **Pieza "estrella" por monstruo** con efecto visual (la dama araña deja telaraña) y tema musical por monstruo.
-3. **Eventos con monstruos** y más puzzles (mate en 3–4, finales de peones, tácticas).
+3. Más eventos con monstruos (hay 3) y más puzzles (mate en 3–4, finales de peones, tácticas).
 4. **Escenario vertical 720×1280 para celular** (sección 18) y controles táctiles.
 5. **Volumen** con deslizadores (hoy hay interruptores de sonido y música).
 6. Mejoras de IA: libro de aperturas corto, mejor manejo de finales de peones.

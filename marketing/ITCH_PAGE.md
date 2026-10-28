@@ -15,7 +15,7 @@ Everything you need to fill in the itch.io "Create new project" form. Copy each 
 | **Short description or tagline** | Real chess, roguelite runs, and a cast of monsters. Start with a king and a few pawns, and survive. |
 | **Classification** | Games |
 | **Kind of project** | HTML |
-| **Release status** | In development (early alpha, v0.10.0) |
+| **Release status** | In development (early alpha, v0.10.1) |
 | **Pricing** | No payments (or "Donate" if you want tips) |
 | **Uploads** | `dist/checkmate-survivors-html5.zip`, and tick **"This file will be played in the browser"** |
 | **Viewport dimensions** | **1280 × 720** (the game's fixed reference resolution; it scales to any window and letterboxes). Tick **Fullscreen button** (there is also an in-game Fullscreen button). Leave "Mobile friendly" off for now. |
