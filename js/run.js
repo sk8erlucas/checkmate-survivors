@@ -114,8 +114,9 @@ function randomPotion() { return weighted(Object.keys(D.POTIONS), id => D.POTION
 
 // ------------------------------------------------------------------ map generation
 const DIFF_W = [[100, 0, 0], [85, 15, 0], [60, 35, 5], [40, 45, 15], [25, 50, 25], [20, 45, 35]];
-function pickDiff(layer) {
-  const w = DIFF_W[Math.min(layer, 5)];
+const DIFF_W2 = [[0, 80, 20], [0, 70, 30], [0, 60, 40], [0, 55, 45], [0, 50, 50], [0, 45, 55]];   // act 2: no easy fights
+function pickDiff(layer, act) {
+  const w = (act === 2 ? DIFF_W2 : DIFF_W)[Math.min(layer, 5)];
   return weighted(['easy', 'normal', 'hard'], d => w[['easy', 'normal', 'hard'].indexOf(d)]);
 }
 const OBJ_W = {
@@ -128,7 +129,8 @@ const OBJ_W = {
 const PUZZLE_FIRST = [{ duel: 20, scenario: 80 }, { duel: 25, scenario: 40, event: 15, shop: 5, rest: 5, rush: 10 }];
 // node types that are pointless twice in a row (shop -> shop, campfire -> campfire...)
 const NO_REPEAT = new Set(['shop', 'rest', 'event', 'rush', 'arena', 'elite']);
-function genMap() {
+function genMap(act) {
+  act = act || 1;
   const widths = [3, 2 + rnd(2), 3, 3, 2 + rnd(2), 2, 2, 1];
   const layers = widths.map((w, l) => Array.from({ length: w }, (_, i) => ({ id: l + '-' + i, layer: l, idx: i, next: [], done: false })));
   // 1) node types per step
@@ -138,7 +140,7 @@ function genMap() {
     else if (l === 6) types = shuffle(['rest', 'shop']);
     else if (l === 3) types = shuffle(['shop', 'rest', 'duel']);
     else types = nodes.map(() => weighted(l === 0 ? ['duel', 'scenario'] : ['duel', 'scenario', 'event', 'shop', 'rest', 'rush', 'elite'],
-      t => (PUZZLE_FIRST[l] || { duel: 46, scenario: 14, event: 16, shop: 6, rest: 6, rush: 8, elite: l >= 4 ? 9 : 0 })[t] || 0));
+      t => ((act === 1 && PUZZLE_FIRST[l]) || { duel: 46, scenario: 14, event: 16, shop: 6, rest: 6, rush: 8, elite: l >= 4 ? 9 : 0 })[t] || 0));
     if (l === 2 && !types.includes('rush')) types[rnd(types.length)] = 'rush';   // every run gets at least one Mate Rush
     if (l === 4 && !types.includes('arena')) types[rnd(types.length)] = 'arena'; // ...and one Arena before the boss
     nodes.forEach((n, i) => { n.type = types[i]; });
@@ -168,21 +170,22 @@ function genMap() {
   const usedScen = new Set(), usedEvents = new Set(), usedFoes = {};
   const pickEnemy = (n, tier) => {
     const avoid = new Set((n.layer ? layers[n.layer - 1].filter(a => a.next.includes(n.idx)) : []).map(a => a.enemyId));
-    let pool = D.ENEMIES.filter(e => e.tier === tier && !avoid.has(e.id));
-    if (!pool.length) pool = D.ENEMIES.filter(e => e.tier === tier);
+    const inAct = e => (e.act || 1) === act || (act === 2 && e.tier === 'hard');   // act 1's hard monsters also roam the Catacombs
+    let pool = D.ENEMIES.filter(e => e.tier === tier && inAct(e) && !avoid.has(e.id));
+    if (!pool.length) pool = D.ENEMIES.filter(e => e.tier === tier && inAct(e));
     const least = Math.min(...pool.map(e => usedFoes[e.id] || 0)), id = pickOne(pool.filter(e => (usedFoes[e.id] || 0) === least)).id;
     usedFoes[id] = (usedFoes[id] || 0) + 1; return id;
   };
   layers.forEach((nodes, l) => nodes.forEach(n => {
     if (n.type === 'duel') {
-      n.diff = pickDiff(l); n.intro = n.diff === 'easy' && l < D.INTRO.layers;
+      n.diff = pickDiff(l, act); n.intro = act === 1 && n.diff === 'easy' && l < D.INTRO.layers;
       n.tc = n.intro ? 'rapid' : pickOne(Object.keys(D.TIMECTRL));
       n.enemyId = pickEnemy(n, n.diff);
       n.objType = weighted(Object.keys(OBJ_W[n.intro ? 'intro' : n.diff]), t => OBJ_W[n.intro ? 'intro' : n.diff][t]);
     } else if (n.type === 'elite') {     // optional mini-boss: a hard monster with a guaranteed amulet
       n.diff = 'hard'; n.tc = pickOne(['rapid', 'blitz']); n.enemyId = pickEnemy(n, 'hard'); n.objType = 'mate';
     } else if (n.type === 'scenario') {
-      n.diff = pickDiff(l);
+      n.diff = pickDiff(l, act);
       const pool = D.SCENARIOS.filter(s => s.diff === n.diff && !usedScen.has(s.id));
       const sc = pool.length ? pickOne(pool) : pickOne(D.SCENARIOS.filter(s => !usedScen.has(s.id)).concat(D.SCENARIOS));
       usedScen.add(sc.id); n.scenarioId = sc.id; n.diff = sc.diff;
@@ -190,7 +193,7 @@ function genMap() {
       const ids = Object.keys(EVENTS).filter(e => !usedEvents.has(e));
       n.eventId = pickOne(ids.length ? ids : Object.keys(EVENTS)); usedEvents.add(n.eventId);
     } else if (n.type === 'boss') {
-      n.diff = 'boss'; n.tc = 'blitz'; n.enemyId = 'lich'; n.objType = 'mate';
+      n.diff = 'boss'; n.tc = 'blitz'; n.enemyId = act === 2 ? 'necromancer' : 'lich'; n.objType = 'mate';
     }
   }));
   return { layers };
@@ -203,9 +206,10 @@ function reachable(run) {
 }
 
 // ------------------------------------------------------------------ rewards
+const actMult = () => (CS.run && CS.run.act === 2 ? 1.5 : 1);
 function coinReward(node) {
   const run = CS.run, tc = D.TIMECTRL[node.tc] || { mult: 1 };
-  return Math.round((20 + node.layer * 4) * (node.type === 'elite' ? 1.3 : 1) * D.DIFFS[node.diff].coin * tc.mult * (1 + 0.1 * lvl('purse')) * (run.relics.includes('lucky') ? 1.25 : 1));
+  return Math.round((20 + node.layer * 4) * actMult() * (node.type === 'elite' ? 1.3 : 1) * D.DIFFS[node.diff].coin * tc.mult * (1 + 0.1 * lvl('purse')) * (run.relics.includes('lucky') ? 1.25 : 1));
 }
 function makeRewards(diff) {
   const run = CS.run, opts = [];
@@ -317,7 +321,7 @@ function trackMatch(res, m, cfg, node) {
     if (node.tc === 'bullet') unlock('bullet');
     if (D.ENEMIES.some(e => e.id === cfg.enemy.id)) { c.beaten[cfg.enemy.id] = 1; if (D.ENEMIES.every(e => c.beaten[e.id])) unlock('bestiary'); }
     if (node.type === 'elite') unlock('elite');
-    if (node.type === 'boss') { unlock('boss'); if (!CS.run.usedPotion) unlock('noPotions'); }
+    if (node.type === 'boss') { unlock(cfg.enemy.id === 'necromancer' ? 'necromancer' : 'boss'); if (!CS.run.usedPotion) unlock('noPotions'); }
   }
   saveMeta();
 }
@@ -482,9 +486,9 @@ function showMap() {
   const layers = h('div', { class: 'maplayers' }, run.map.layers.map((layer, l) =>
     h('div', { class: 'maplayer' }, h('div', { class: 'layerlabel' }, l === 7 ? T('map.boss') : T('map.step', { n: l + 1 })), layer.map(n => nodeEl(n, reach)))));
   const inner = h('div', { class: 'mapinner' }, svg, layers);
-  const wrap = h('div', { class: 'mapwrap' }, inner);
+  const wrap = h('div', { class: 'mapwrap' + (run.act === 2 ? ' act2' : '') }, inner);
   UI.screen(h('div', { class: 'screen map' }, runHeader(),
-    h('div', { class: 'row between' }, h('h2', null, T('map.title')), h('p', { class: 'muted' }, run.cur ? T('map.choose') : T('map.chooseFirst'))),
+    h('div', { class: 'row between' }, h('h2', null, (run.act === 2 ? T('map.act2') + ' \u00b7 ' : '') + T('map.title')), h('p', { class: 'muted' }, run.cur ? T('map.choose') : T('map.chooseFirst'))),
     wrap, legend(), sidePanel()));
   requestAnimationFrame(() => {
     drawEdges(inner, svg, run, reach);
@@ -627,7 +631,7 @@ function onMatchEnd(res, m, cfg, node, snapshot) {
 }
 
 // ------------------------------------------------------------------ Mate Rush bonus node
-const rushPer = n => Math.round((4 + n.layer) * (1 + 0.1 * lvl('purse')) * (CS.run.relics.includes('lucky') ? 1.25 : 1));
+const rushPer = n => Math.round((4 + n.layer) * actMult() * (1 + 0.1 * lvl('purse')) * (CS.run.relics.includes('lucky') ? 1.25 : 1));
 function startRush(n) {
   const run = CS.run;
   setPending('done', n);   // leaving in the middle forfeits the bonus instead of replaying it
@@ -646,12 +650,12 @@ function startRush(n) {
 // Three short duels in a row against weak monsters. Each win pays coins at
 // once; you may retire between rounds, and losing only ends the Arena.
 const ARENA = { rounds: [{ diff: 'easy', pay: 1 }, { diff: 'easy', pay: 1.5 }, { diff: 'normal', pay: 2.2 }], tc: 'blitz' };
-const arenaPrize = (n, i) => Math.round((8 + n.layer * 2) * ARENA.rounds[i].pay * (1 + 0.1 * lvl('purse')) * (CS.run.relics.includes('lucky') ? 1.25 : 1));
+const arenaPrize = (n, i) => Math.round((8 + n.layer * 2) * actMult() * ARENA.rounds[i].pay * (1 + 0.1 * lvl('purse')) * (CS.run.relics.includes('lucky') ? 1.25 : 1));
 function showArena(n) {
   const run = CS.run;
   setPending('done', n);   // leaving mid-arena keeps what you won but ends it
   const A = n.arena = n.arena || { round: 0, won: 0 };
-  if (!A.foes) A.foes = ARENA.rounds.map(r => pickOne(D.ENEMIES.filter(e => e.tier === r.diff)).id);
+  if (!A.foes) A.foes = ARENA.rounds.map(r => pickOne(D.ENEMIES.filter(e => e.tier === (run.act === 2 && r.diff === 'easy' ? 'normal' : r.diff))).id);
   saveRun();
   const steps = ARENA.rounds.map((r, i) => h('div', { class: 'arena-step' + (i < A.round ? ' won' : i === A.round ? ' next' : '') },
     h('img', { class: 'nodeimg', src: root.Portraits.url(A.foes[i], i < A.round ? 'ko' : 'idle'), alt: '' }),
@@ -691,7 +695,28 @@ function arenaRound(n) {
 }
 
 function afterWin(node) {
-  if (node.type === 'boss') { node.done = true; CS.run.stats.nodes++; endRun(true); } else showRewards(node);
+  if (node.type !== 'boss') { showRewards(node); return; }
+  if ((CS.run.act || 1) < D.ACTS) showActClear(node);
+  else { node.done = true; CS.run.stats.nodes++; endRun(true); }
+}
+// Between acts: a great campfire (+1 Retry, pick one of 3 amulets), then descend or retire victorious.
+function showActClear(node) {
+  const run = CS.run;
+  if (!run.actOffer) {
+    run.actOffer = shuffle(unownedRelics(run)).slice(0, 3).map(id => ({ kind: 'relic', id }));
+    if (!run.actOffer.length) run.actOffer = [{ kind: 'coins', amount: 60 }];
+    run.retries++; saveRun();
+  }
+  const cards = h('div', { class: 'grid' }, run.actOffer.map(o => rewardCard(o, () => {
+    if (run.actOffer.some(x => x.taken)) return;   // one amulet only
+    o.taken = true; applyReward(o); UI.sfx('buy'); saveRun(); showActClear(node);
+  })));
+  UI.screen(h('div', { class: 'screen center-screen act-clear' }, runHeader(), icon('rest', '#ff9f5a', null, 'big'),
+    h('h2', null, T('act.cleared')), h('p', null, T('act.campfire')), cards,
+    h('p', { class: 'muted' }, T('act.choice')),
+    h('div', { class: 'row center' },
+      btn(T('act.descend'), () => { node.done = true; run.stats.nodes++; run.act = 2; run.actOffer = null; run.map = genMap(2); run.cur = null; run.pending = null; unlock('act2'); showMap(); }, 'primary'),
+      btn(T('act.retire'), () => { node.done = true; run.stats.nodes++; endRun(true); }))));
 }
 
 // ------------------------------------------------------------------ save / continue
@@ -810,13 +835,13 @@ function showRest(n) {
 function endRun(victory) {
   const run = CS.run, m = CS.meta;
   if (CS.match) { CS.match.destroy(); CS.match = null; }
-  const crowns = 5 + run.stats.wins * 5 + (run.stats.nodes - run.stats.wins) * 2 + (victory ? 40 : 0) + Math.floor(run.coins / 10);
+  const crowns = 5 + run.stats.wins * 5 + (run.stats.nodes - run.stats.wins) * 2 + (victory ? 40 * (run.act || 1) : 0) + Math.floor(run.coins / 10);
   const cheapest = Math.min(...D.META.filter(u => lvl(u.id) < u.max).map(u => u.cost[lvl(u.id)]));
   m.crowns += crowns; m.stats.runs++; if (victory) m.stats.wins++;
   m.stats.bestNodes = Math.max(m.stats.bestNodes, run.stats.nodes);
   const step = run.cur ? run.cur.layer + 1 : 0;   // where the run ended, for balancing (last 30 runs)
   if (run.daily) { const d = m.daily; if (d.date !== run.daily) { d.date = run.daily; d.best = 0; } d.best = Math.max(d.best, step); unlock('daily'); }
-  m.stats.history = (m.stats.history || []).concat({ step, nodes: run.stats.nodes, wins: run.stats.wins, victory: !!victory, by: victory ? null : run.lastFoe || null }).slice(-30);
+  m.stats.history = (m.stats.history || []).concat({ act: run.act || 1, step, nodes: run.stats.nodes, wins: run.stats.wins, victory: !!victory, by: victory ? null : run.lastFoe || null }).slice(-30);
   saveMeta(); CS.run = null; UI.store.saveRun(null);
   UI.sfx(victory ? 'win' : 'lose');
   UI.screen(h('div', { class: 'screen center-screen' },

@@ -8,7 +8,8 @@ Roguelite de **ajedrez real** en pixel art (HTML5). Empezás con un rey y pocos 
 - **Nodos bonus Mate Rush** en el mapa: 60 segundos de mates en 1, cada mate da monedas.
 - **Arena**: tres duelos cortos seguidos por monedas; perder no termina la run.
 - Resolución fija de **1280×720** que se escala a cualquier ventana.
-- **Logros** (16), **Run del día** con mapa fijo por fecha, monstruos **élite** y **Opciones**.
+- **Dos actos**: el Bosque Embrujado y las Catacumbas (jefes: el Liche del Reloj y el Nigromante).
+- **Logros** (18), **Run del día** con mapa fijo por fecha, monstruos **élite** y **Opciones**.
 - **Diseño completo:** [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)
 - **Tests:** `node tests/perft.js`, `node tests/ai.js`, `node tests/scenarios.js`, `node tests/i18n.js`, `node tests/smoke.js`, `node tests/balance.js`
 - **Página de itch.io:** portada, capturas y textos en [`marketing/`](marketing/ITCH_PAGE.md).

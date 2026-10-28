@@ -181,6 +181,31 @@ const FACTIONS = {
     for (const y of [11, 12, 13]) sides(m, y, (x, d) => { add(m, x + d, y, 10); if (y === 13) add(m, x + 2 * d, y, 10); });
   } },
   lich: { color: '#4f6890', accent: '#7fffe8', outline: '#0a0a18', glow: 'rgba(127,255,232,0.75)', mod(m, t) { eyesOn(m, t, 9, true); } },
+  // act 2: the Catacombs
+  mummy: { color: '#8f8a5a', accent: '#ffd84a', second: '#5e5a36', mod(m, t) {
+    put(m, EYES[t][0][0], EYES[t][0][1], 9);
+    for (let y = EYES[t][0][1] + 2; y <= 11; y += 2) { const [a, b] = span(m, y); for (let x = a + 1; x < b; x++) if (at(m, x, y) === 1 && (x + y) % 4 < 3) put(m, x, y, 10); }
+    sides(m, 13, (x, d) => add(m, x + d, 13, 1));
+  } },
+  golem: { color: '#7a7468', accent: '#7fffe8', second: '#5a8a3a', mod(m, t) {
+    eyesOn(m, t, 9);
+    for (let y = 12; y <= 13; y++) for (let x = 0; x < S; x++) if (at(m, x, y) === 1 && (x * 3 + y) % 5 === 0) put(m, x, y, 10);
+    const r = EYES[t][0][1] + 2, [a] = span(m, r); if (a >= 0) { put(m, a + 1, r, 2); put(m, a + 2, r + 1, 2); }
+  } },
+  banshee: { color: '#8fd0d8', accent: '#1a1430', second: '#f4f8ff', mod(m, t) {
+    eyesOn(m, t, 9, true);
+    for (const x of [3, 6, 9, 12]) put(m, x, 13, 0);
+    const y0 = topRow(m), [a, b] = span(m, y0); add(m, a - 1, y0 + 1, 10); add(m, b + 1, y0 + 1, 10); add(m, a - 1, y0 + 2, 10); add(m, b + 1, y0 + 2, 10);
+  } },
+  gargoyle: { color: '#5e5e74', accent: '#ffb347', second: '#3a3a4c', mod(m, t) {
+    eyesOn(m, t, 9);
+    const y0 = topRow(m), [a, b] = span(m, y0); add(m, a - 1, y0 - 1, 10); add(m, b + 1, y0 - 1, 10);
+    for (const y of [11, 12]) sides(m, y, (x, d) => { add(m, x + d, y, 10); if (y === 11) add(m, x + 2 * d, y - 1, 10); });
+  } },
+  necromancer: { color: '#3d7050', accent: '#9aff7a', outline: '#0a140c', glow: 'rgba(154,255,122,0.7)', second: '#e8e0d0', mod(m, t) {
+    eyesOn(m, t, 9, true);
+    for (let x = 4; x <= 11; x += 3) if (at(m, x, 12)) put(m, x, 12, 10);
+  } },
   rival: { color: '#625e80', accent: '#c89aff', mod(m, t) { eyesOn(m, t, 9); } },
 };
 function factionPal(f) { const p = palFor(f.color); p[9] = f.accent; p[10] = f.second || mix(f.color, '#000000', 0.55); if (f.outline) p[1] = f.outline; return p; }

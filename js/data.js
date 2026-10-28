@@ -7,7 +7,7 @@
 'use strict';
 const D = {};
 
-D.VERSION = '0.9.0';        // shown on the title screen (early alpha)
+D.VERSION = '0.10.0';        // shown on the title screen (early alpha)
 
 D.TYPE = { p: 1, n: 2, b: 3, r: 4, q: 5 };            // chess.js piece types
 D.MAX_ARMY = { p: 8, n: 2, b: 2, r: 2, q: 1 };         // never exceed a standard army
@@ -69,7 +69,14 @@ D.ENEMIES = [
   { id: 'medusa',   style: 'positional', tier: 'hard' },
   { id: 'vampire',  style: 'balanced',   tier: 'hard', thief: 1 },
   { id: 'lich',     style: 'balanced',   tier: 'boss', thief: 2, hourglass: 1 },
+  // act 2: the Catacombs (act 1 hard monsters also roam here)
+  { id: 'mummy',       style: 'defensive',  tier: 'normal', act: 2 },
+  { id: 'banshee',     style: 'aggressive', tier: 'normal', act: 2 },
+  { id: 'golem',       style: 'positional', tier: 'normal', act: 2 },
+  { id: 'gargoyle',    style: 'balanced',   tier: 'hard',   act: 2, thief: 1 },
+  { id: 'necromancer', style: 'balanced',   tier: 'boss',   act: 2, thief: 2, hourglass: 1 },
 ];
+D.ACTS = 2;
 
 // ready-made positions, all validated by tests/scenarios.js (exhaustive mate solver)
 D.SCENARIOS = [
@@ -107,6 +114,8 @@ D.ACHIEVEMENTS = [
   { id: 'noPotions',   crowns: 20, shape: 'potion',  color: '#9aa0b0' },
   { id: 'collector',   crowns: 25, shape: 'bag',     color: '#a07850' },
   { id: 'boss',        crowns: 30, shape: 'boss',    color: '#b57cff' },
+  { id: 'act2',        crowns: 15, shape: 'rest',    color: '#9aff7a' },
+  { id: 'necromancer', crowns: 40, shape: 'elite',   color: '#9aff7a' },
   { id: 'bestiary',    crowns: 30, shape: 'eye',     color: '#7ac0f0' },
 ];
 

@@ -129,6 +129,19 @@ async function claimRewards() {
   await waitFor(() => pageText().includes('Choose your path'), 3000, 'map after rewards');
 }
 const kinds = new Set();
+let actTwoDone = false;
+// after the Act 1 boss: the first time descend into Act 2 and check it, afterwards retire victorious
+async function actTwo() {
+  ok(pageText().includes('Act 1 cleared'), 'beating the Act 1 boss opens the great campfire between acts');
+  const am = buttons().find(b => b.className.includes('card pick') && !b.disabled); if (am) am.click();
+  if (actTwoDone) { findBtn('Retire victorious').click(); ok(pageText().includes('VICTORY') || pageText().includes('Crowns earned'), 'retiring after Act 1 ends the run as a victory'); return; }
+  actTwoDone = true; findBtn('Descend to Act 2').click();
+  const L = CS.run.map.layers, foes = L.flat().filter(n => n.enemyId).map(n => n.enemyId);
+  ok(CS.run.act === 2 && L[7][0].enemyId === 'necromancer' && pageText().includes('Catacombs'), 'Act 2 map: the Catacombs with the Necromancer as boss');
+  ok(foes.every(id => { const e = D.ENEMIES.find(x => x.id === id); return (e.act || 1) === 2 || e.tier === 'hard'; }), 'Act 2 only fields Catacomb monsters (plus act 1 hard ones)');
+  for (let i = 0; i < 40; i++) { const m = CS._test.genMap(2); if (m.layers.flat().some(n => n.enemyId && !D.ENEMIES.some(e => e.id === n.enemyId))) { fail++; console.log('FAIL act 2 map with an unknown monster'); break; } }
+  findBtn('Abandon').click();
+}
 async function fullRun(first) {
   if (first) {
     CS.init(); await sleep(10);
@@ -152,7 +165,7 @@ async function fullRun(first) {
       const m = CS.match; ok(!!m, 'match mounted for ' + node.type + ' ' + node.id);
       if (node.type === 'boss') m.enemy.thief = 3;
       await playMatch(m, { cheat: played >= 1 && node.type !== 'scenario', items: played === 0 }); played++;
-      if (m.result.win) { findBtn('Continue').click(); if (node.type === 'boss') { await sleep(10); ended = true; break; } await claimRewards(); }
+      if (m.result.win) { findBtn('Continue').click(); if (node.type === 'boss') { await sleep(10); await actTwo(); ended = true; break; } await claimRewards(); }
       else if (findBtn('Retry battle')) { findBtn('Retry battle').click(); await sleep(20); m.destroy(); const m2 = CS.match; ok(m2 && m2 !== m, 'retry restarts the battle'); m2.begin(); m2.finish({ win: true, reason: 'mate' }); await waitFor(() => findBtn('Continue'), 3000); findBtn('Continue').click(); await claimRewards(); }
       else { findBtn('End run').click(); ended = true; }
     } else if (node.type === 'arena') {

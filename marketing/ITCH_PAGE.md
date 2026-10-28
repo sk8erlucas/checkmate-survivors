@@ -15,7 +15,7 @@ Everything you need to fill in the itch.io "Create new project" form. Copy each 
 | **Short description or tagline** | Real chess, roguelite runs, and a cast of monsters. Start with a king and a few pawns, and survive. |
 | **Classification** | Games |
 | **Kind of project** | HTML |
-| **Release status** | In development (early alpha, v0.9.0) |
+| **Release status** | In development (early alpha, v0.10.0) |
 | **Pricing** | No payments (or "Donate" if you want tips) |
 | **Uploads** | `dist/checkmate-survivors-html5.zip`, and tick **"This file will be played in the browser"** |
 | **Viewport dimensions** | **1280 × 720** (the game's fixed reference resolution; it scales to any window and letterboxes). Tick **Fullscreen button** (there is also an in-game Fullscreen button). Leave "Mobile friendly" off for now. |
@@ -28,7 +28,7 @@ Everything you need to fill in the itch.io "Create new project" form. Copy each 
 | **Languages** | English, Spanish |
 | **Average session** | About half an hour |
 | **Cover image** | `marketing/cover.png` (630 × 500) |
-| **Screenshots** (in this order) | `marketing/screenshots/03_spider_queen.png`, `04_boss_lich.png`, `08_mate_rush.png`, `02_map.png`, `05_witch_promotion.png`, `01_title.png`, `06_shop.png`, `07_upgrades.png` |
+| **Screenshots** (in this order) | `marketing/screenshots/03_spider_queen.png`, `04_boss_lich.png`, `11_necromancer.png`, `08_mate_rush.png`, `02_map.png`, `05_witch_promotion.png`, `01_title.png`, `06_shop.png`, `07_upgrades.png` |
 
 > **Suggested theme colors** (Edit theme): background `#1a1322`, text `#efe6f7`, links/buttons `#e8b84a`, secondary `#b57cff`.
 
@@ -43,7 +43,8 @@ You start with a king and a handful of pawns. Every step of the map is a choice:
 The rules of chess never change: real moves, castling, en passant and promotion. The roguelite part is everything around the board.
 
 ### Features
-- **10 monster opponents, each with its own AI personality.** Gloop the Slime blunders, Grabby the Goblin grabs every piece, Boo the Ghost turtles, the Widow Weaver attacks your king, Count Vlastor drains your clock...
+- **Two acts**: the Haunted Woods and the Catacombs. Beat the Hourglass Lich and choose: retire victorious, or descend to face the Necromancer.
+- **15 monster opponents, each with its own AI personality.** Gloop the Slime blunders, Grabby the Goblin grabs every piece, Boo the Ghost turtles, the Widow Weaver attacks your king, Count Vlastor drains your clock...
 - **Every monster plays with its own pieces.** Spider pieces have legs and red eyes, the witch's pawns wear little hats, the vampire's have capes, and the Lich's glow.
 - **Every monster has a trait** that bends the clock or your purse, never the rules: the Goblin pickpockets your coins, the Spider's web costs you seconds, the Witch hexes one of your potions, Medusa's gaze speeds up your clock, and the Lich has a second phase.
 - **Animated opponents** that react to the game: they flinch when you capture, gloat when they take your pieces, panic when you check them and mourn their queen. Their army is their health bar.
@@ -55,7 +56,7 @@ The rules of chess never change: real moves, castling, en passant and promotion.
 - **The Arena**: three short duels in a row for coins. Retire whenever you like; losing in the Arena doesn't end your run.
 - **Elite monsters**: optional tough fights that always offer an amulet.
 - **Daily run**: the same map for everyone, every day.
-- **16 achievements** that pay Crowns, and options for reduced animations and classic enemy pieces.
+- **18 achievements** that pay Crowns, and options for reduced animations and classic enemy pieces.
 - **Potions and amulets**: rewind, oracle hints, threat vision, time thief, and more. Reroll the shop when you don't like the offer (the first reroll is free).
 - **Permanent upgrades and an amulet collection**: earn Crowns every run, unlock lives, extra pawns and starting pieces, and buy amulets once to start every run with them.
 - **A gentle start**: the first steps are warm-up battles against weak monsters with simple goals.
@@ -86,7 +87,8 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 
 ### Características
 - **Cada monstruo tiene un rasgo** que afecta el reloj o tus monedas, nunca las reglas: el goblin te roba monedas, la telaraña te cuesta segundos, la bruja hechiza una poción y el Liche tiene segunda fase.
-- **10 monstruos rivales con personalidad de juego propia.** Gloop el Slime se equivoca, Grabby el Goblin come todo lo que puede, Buu el Fantasma se encierra, la Viuda Tejedora ataca a tu rey, el Conde Vlastor te drena el reloj...
+- **Dos actos**: el Bosque Embrujado y las Catacumbas. Vencé al Liche del Reloj y elegí: retirarte victorioso o bajar a enfrentar al Nigromante.
+- **15 monstruos rivales con personalidad de juego propia.** Gloop el Slime se equivoca, Grabby el Goblin come todo lo que puede, Buu el Fantasma se encierra, la Viuda Tejedora ataca a tu rey, el Conde Vlastor te drena el reloj...
 - **Cada monstruo juega con sus propias piezas**: las de la araña tienen patas y ojos rojos, los peones de la bruja llevan sombrerito, los del vampiro, capa, y las del Liche brillan.
 - **Rivales animados** que reaccionan: se duelen cuando les comés, festejan cuando te comen, entran en pánico con el jaque y lloran a su dama. Su ejército es su barra de vida.
 - **Capturas con impacto**: partículas, piezas que salen volando, temblor y sonidos de golpe. El rey derrotado cae de costado.
@@ -97,7 +99,7 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 - **La Arena**: tres duelos cortos seguidos por monedas. Retirate cuando quieras; perder en la Arena no termina tu run.
 - **Monstruos élite**: peleas difíciles y opcionales que siempre ofrecen un amuleto.
 - **Run del día**: el mismo mapa para todos, cada día.
-- **16 logros** que dan Coronas, y opciones de menos animaciones y piezas enemigas clásicas.
+- **18 logros** que dan Coronas, y opciones de menos animaciones y piezas enemigas clásicas.
 - **Mejoras permanentes y colección de amuletos** con Coronas: vidas, peones extra, piezas iniciales, y amuletos que se compran una vez y te acompañan en todas las runs.
 - **Inicio amable**: los primeros pasos son batallas de calentamiento.
 - **Guardado automático** y **música chiptune** generada en el navegador.
@@ -109,7 +111,9 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 
 ## Devlog post (optional, for launch)
 
-> **Checkmate Survivors v0.9.0 is out!** 16 achievements, a daily run with the same map for everyone, elite monsters, an options menu, and maps that no longer repeat shops or monsters back to back.
+> **Checkmate Survivors v0.10.0 is out!** Act 2 is here: descend into the Catacombs after beating the Lich. Four new monsters (Mummy, Banshee, Golem, Gargoyle), each with its own pieces and trait, and a new boss: the Necromancer.
+
+> *(v0.9.0)* **Checkmate Survivors v0.9.0 is out!** 16 achievements, a daily run with the same map for everyone, elite monsters, an options menu, and maps that no longer repeat shops or monsters back to back.
 
 > *(v0.8.0)* **Checkmate Survivors v0.8.0 is out!** The Arena (three quick duels for coins), a fixed 1280×720 layout that scales to any window and scrolls properly inside itch.io, and your last run shown on the title screen.
 

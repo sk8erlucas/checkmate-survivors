@@ -1,7 +1,7 @@
 # Checkmate Survivors — Documento de diseño
 
 > Roguelite 2D de **ajedrez real** en pixel art. HTML5 + JavaScript puro, pensado para subirse a **itch.io**.
-> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.9.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
+> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.10.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
 > **Publicado** en itch.io: <https://fibonaku.itch.io/checkmate-survivors>
 
 ---
@@ -328,7 +328,7 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 
 ---
 
-## 11. Estado (v0.9.0 · Early Alpha) y hoja de ruta
+## 11. Estado (v0.10.0 · Early Alpha) y hoja de ruta
 
 **Hecho:** motor completo, IA con 6 estilos, mapa ramificado, 4 tipos de objetivo, relojes, 6 pociones, 7 reliquias, 5 eventos, tienda, fogata, jefe, 10 puzzles, tienda permanente, guardado, EN/ES, sonido.
 **v0.2:** retratos animados de rivales con barra de vida, daño, reacciones y frases; nueva dama; tarjetas rediseñadas; guardar/continuar run.
@@ -339,9 +339,10 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 **v0.7.0:** Mate Rush deja de ser un modo aparte y pasa a ser un **nodo bonus del mapa** (60 s, monedas por mate, uno garantizado en el paso 3). Las demás ideas de modos se replantean como nodos de la run (sección 17).
 **v0.8.0:** **resolución fija de 1280×720** escalada a la ventana, con scroll interno (arregla tiendas y pantallas largas que no se podían recorrer, sección 18); nodo **Arena**; **historial de runs** (paso alcanzado y quién te venció) para balancear, con la última run en el menú.
 **v0.9.0:** **16 logros** (pagan Coronas); **Run del día** con mapa fijo por fecha; nodo **Élite**; pantalla de **Opciones** (sonido, música, menos animaciones, piezas enemigas clásicas); el mapa ya no repite nodos no combativos ni monstruos en caminos conectados.
+**v0.10.0:** **Acto 2, Las Catacumbas** (sección 14): 4 monstruos nuevos y el jefe **Nigromante**, gran fogata entre actos y la opción de retirarse victorioso o seguir.
 
 **Pendiente / ideas (por prioridad):**
-1. **Actos 2 y 3** (sección 14): el trabajo grande que queda. Incluye monstruos nuevos (retrato, facción, rasgo y frases), paletas de fondo y temas por acto, el Nigromante y el Rey Sombra, Mate Rush de mates en 2 y la fogata grande entre actos.
+1. **Acto 3, El Castillo** (sección 14): gárgola ya existe; faltan dragón joven, caballero sin cabeza, súcubo, kraken y el jefe Rey Sombra. Además, tema musical propio por acto y Mate Rush de mates en 2.
 2. **Pieza "estrella" por monstruo** con efecto visual (la dama araña deja telaraña) y tema musical por monstruo.
 3. **Eventos con monstruos** y más puzzles (mate en 3–4, finales de peones, tácticas).
 4. **Escenario vertical 720×1280 para celular** (sección 18) y controles táctiles.
@@ -393,12 +394,35 @@ Cada monstruo suma **un rasgo** que no cambia las reglas del ajedrez. Actúa sob
 
 El rasgo se ve en el detalle del nodo, debajo del nombre del rival (★) y en la tarjeta de presentación de la batalla. Se implementan en `match.js` (`this.trait`), salvo el del esqueleto (`startDuel` en `run.js`) y el robo de monedas, que la run aplica con `cfg.onSteal`.
 
-## 14. Actos 2 y 3 (propuesta)
-- **Acto 1, El Bosque Embrujado** (actual): slime, goblin, fantasma, araña, esqueleto, bruja, lobizón, medusa, vampiro. Jefe: el Liche del Reloj.
-- **Acto 2, Las Catacumbas**: momia (defensiva, venda tus piezas: efecto visual), gólem de piedra (lento, posicional; su reloj tiene +30 s pero sin incremento), banshee (grita: −3 s a tu reloj en cada jaque que te da), murciélago gigante, rata reina. Jefe: **el Nigromante**, que juega con el ejército de los jefes anteriores (otra paleta).
-- **Acto 3, El Castillo**: gárgola, dragón joven, caballero sin cabeza (solo caballos y torres: composición de ejército temática), súcubo, kraken del foso. Jefe final: **el Rey Sombra**, que empieza con el ejército completo; vos llegás con lo que juntaste.
-- Cada acto suma un paso al mapa y su propia paleta de fondo y tema musical. Entre actos, una **fogata grande**: curar 1 Reintento + elegir un amuleto de 3.
-- **Composición temática de ejércitos** (sin salir del máximo estándar): algunos monstruos prefieren ciertas piezas. El caballero sin cabeza tiene caballos, el gólem torres y la bruja alfiles.
+## 14. Actos (Acto 2 implementado en v0.10)
+### Acto 1: El Bosque Embrujado
+Slime, goblin, fantasma, araña, esqueleto, bruja, lobizón, medusa y vampiro. Jefe: **el Liche del Reloj**.
+
+### Entre actos: la gran fogata
+Al vencer al Liche aparece una pantalla especial:
+- **+1 Reintento** automático y **elegir 1 de 3 amuletos** que no tengas (60 monedas si ya los tenés todos).
+- **Bajar al Acto 2** o **retirarte victorioso**: retirarse termina la run como victoria con el bonus del Acto 1. Seguir arriesga la run, pero paga más.
+- Si se recarga en esta pantalla, vuelve a ella con la misma oferta (se guarda `run.actOffer`).
+
+### Acto 2: Las Catacumbas (implementado)
+- **Mapa propio**: la misma estructura de 7 pasos y jefe, fondo verde oscuro, título "Acto 2: Las Catacumbas". Sin calentamiento ni duelos fáciles: dificultad por paso (normal / difícil) 80/20, 70/30, 60/40, 55/45, 50/50 y 45/55.
+- **Paga ×1.5** en monedas de duelos, puzzles, Mate Rush y Arena (`actMult`).
+- **Monstruos** (`act: 2` en `D.ENEMIES`). Los difíciles del Acto 1 (lobizón, medusa, vampiro) también aparecen:
+
+| Monstruo | Estilo | Tier | Rasgo | Sus piezas |
+|---|---|---|---|---|
+| Ankh la Momia | Defensive | Normal | *Paciencia milenaria*: +20 s en su reloj | oliva con vendas |
+| Wren la Banshee | Aggressive | Normal | *Lamento*: cada jaque que te da te cuesta 3 s | celeste pálido, base ondulada |
+| Escombro el Gólem | Positional | Normal | *Lento pero firme*: +30 s pero sin incremento | piedra con musgo, ojos cian |
+| Grimspire la Gárgola | Balanced | Difícil (roba tiempo) | *Centinela*: tu primera poción de la batalla cuesta 5 s | piedra oscura con cuernos y alas |
+| **El Nigromante** (jefe) | Balanced | Jefe (roba tiempo ×2 + reloj de arena) | *Cosecha de almas*: +4 s por cada pieza que te come; con menos de la mitad de vida te roba 10 s una vez | verde oscuro con brillo verde |
+
+- **Coronas**: el bonus de victoria es 40 × acto alcanzado (80 si vencés al Nigromante).
+- **Logros nuevos**: *Hacia la oscuridad* (bajar al Acto 2, 15 Coronas) y *Saqueatumbas* (vencer al Nigromante, 40). *Cazamonstruos* pasa a requerir también a los del Acto 2.
+- La **Run del día** usa semilla solo para el mapa del Acto 1; el del Acto 2 es aleatorio.
+
+### Acto 3: El Castillo (propuesta)
+Dragón joven, caballero sin cabeza (solo caballos y torres: composición temática), súcubo y kraken del foso. Jefe final: **el Rey Sombra**, que empieza con el ejército completo; vos llegás con lo que juntaste. En el Acto 3 el Mate Rush pasa a mates en 2.
 
 ## 15. Run del día, logros y estadísticas (implementado en v0.9)
 ### Run del día
@@ -407,7 +431,7 @@ El rasgo se ve en el detalle del nodo, debajo del nombre del rival (★) y en la
 - Se guarda el **mejor paso alcanzado del día** (`meta.daily`) y se muestra en el botón. Terminar una cuenta para el logro *Dosis diaria*.
 
 ### Logros
-itch.io **no tiene sistema de logros** para juegos HTML (su API solo cubre compras y descargas), así que son **locales** (`meta.ach`). Se desbloquean una vez, avisan con un cartel dorado y **pagan Coronas**, para que también empujen la meta-progresión. Pantalla *Logros (x/16)* en el menú, con los bloqueados en gris ("???" pero con la descripción visible).
+itch.io **no tiene sistema de logros** para juegos HTML (su API solo cubre compras y descargas), así que son **locales** (`meta.ach`). Se desbloquean una vez, avisan con un cartel dorado y **pagan Coronas**, para que también empujen la meta-progresión. Pantalla *Logros (x/18)* en el menú, con los bloqueados en gris ("???" pero con la descripción visible).
 
 | Logro | Condición | Coronas |
 |---|---|---|
@@ -426,9 +450,11 @@ itch.io **no tiene sistema de logros** para juegos HTML (su API solo cubre compr
 | Ajedrez puro | Vencer al jefe sin usar pociones en la run | 20 |
 | Coleccionista | Tener todos los amuletos permanentes | 25 |
 | Rompetiempos | Vencer al Liche del Reloj | 30 |
-| Cazamonstruos | Vencer a cada monstruo al menos una vez | 30 |
+| Cazamonstruos | Vencer a cada monstruo al menos una vez (incluye el Acto 2) | 30 |
+| Hacia la oscuridad | Bajar al Acto 2 | 15 |
+| Saqueatumbas | Vencer al Nigromante | 40 |
 
-Todos juntos suman 225 Coronas. Los contadores entre runs (puzzles, damas, monstruos vencidos) están en `meta.counts`.
+Con los dos del Acto 2 (sección 14) son 18 y suman 280 Coronas. Los contadores entre runs (puzzles, damas, monstruos vencidos) están en `meta.counts`.
 
 ### Estadísticas
 `meta.stats.history` (últimas 30 runs: paso, nodos, victorias, quién te venció) y la última run en el menú (sección 12).

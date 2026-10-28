@@ -192,6 +192,8 @@ class Match {
     if (this.cfg.onBegin) this.cfg.onBegin();
     this.avatar.say(line(this.enemy.id, 'intro'), 3200);
     UI.music(this.cfg.music || (this.enemy.tier === 'boss' ? 'boss' : 'battle'));
+    if (this.trait === 'mummy') { this.clock[this.ec] += 20000; UI.toast(T('toast.trait.mummy'), 'bad'); }
+    if (this.trait === 'golem') { this.clock[this.ec] += 30000; this.inc[this.ec] = 0; UI.toast(T('toast.trait.golem'), 'bad'); }
     if (this.trait === 'witch' && this.items.length) {
       this.hexed = this.items[Math.floor(Math.random() * this.items.length)];
       UI.toast(T('toast.trait.witch', { p: T('item.' + this.hexed + '.name') }), 'bad'); UI.sfx('hex'); this.avatar.taunt(false);
@@ -312,11 +314,16 @@ class Match {
         av.hurt(val, SP.pieceURL(e.captured, this.faction)); UI.sfx(val >= 5 ? 'death' : 'hit');
         if ((e.captured & 7) === C.QUEEN) av.say(line(id, 'queen'), 3200);
         if ((e.captured & 7) === C.QUEEN && this.trait === 'lich' && !this.phase2) this.lichPhase2();
+        if (this.trait === 'necromancer' && !this.howled && this.material(this.ec) * 2 < this.hpMax) {
+          this.howled = true; UI.toast(T('toast.trait.necromancer'), 'bad'); UI.sfx('warn'); av.taunt(false);
+          if (!this.relics.includes('iron')) { const amt = Math.min(10000, Math.max(0, this.clock[this.pc] - 2000)); this.clock[this.pc] -= amt; this.clock[this.ec] += amt; }
+        }
         if (this.trait === 'werewolf' && !this.howled && this.material(this.ec) * 2 < this.hpMax) {
           this.howled = true; this.clock[this.ec] += 10000; UI.toast(T('toast.trait.werewolf'), 'bad'); av.taunt(false);
         }
       } else {
         av.taunt(true); UI.sfx('hurt');
+        if (this.trait === 'necromancer') { this.clock[this.ec] += 4000; this.floatText(e.capSq, '+4s', '#9aff7a'); }
         if (this.trait === 'goblin' && this.cfg.onSteal) { const c = this.cfg.onSteal(2); if (c) UI.toast(T('toast.trait.goblin', { c }), 'bad'); }
         if (this.trait === 'vampire' && !this.relics.includes('iron')) { this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 2000); this.clock[this.ec] += 2000; this.floatText(e.capSq, '-2s', '#ff5a5a'); }
       }
@@ -333,6 +340,7 @@ class Match {
       this.fx.push({ kind: 'ring', cx: x + 32, cy: y + 32, r: 46, c: '#ff5a5a', t0: performance.now(), dur: 450 });
       UI.sfx('check');
       if (!e.captured && !e.promo) { if (e.byPlayer) { av.shock(); av.chatty('check', 0.4); } else av.taunt(false); }
+      if (!e.byPlayer && this.trait === 'banshee') { this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 3000); this.floatText(k, '-3s', '#8fd0d8'); }
     }
   }
   lichPhase2() {
@@ -395,6 +403,7 @@ class Match {
     const useFree = id === 'hint' && free && this.freeHints > 0;
     if (!useFree && idx < 0) return;
     if (id === this.hexed && !useFree) { UI.toast(T('toast.hexed'), 'bad'); UI.sfx('hex'); return; }
+    if (this.trait === 'gargoyle' && !this.taxed) { this.taxed = true; this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 5000); UI.toast(T('toast.trait.gargoyle'), 'bad'); }
     const consume = () => { if (useFree) this.freeHints--; else this.items.splice(this.items.indexOf(id), 1); };
     switch (id) {
       case 'rewind': {
