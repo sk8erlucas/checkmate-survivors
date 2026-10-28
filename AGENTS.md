@@ -27,7 +27,7 @@ js/match.js         one battle: Avatar (opponent widget), board drawing + effect
 js/run.js           the run: map generation and drawing, nodes, rewards, shop, events, rest, meta shop, save/continue
 js/rush.js          Mate Rush bonus node (the Arena node lives in run.js): random mate-in-one generator + 60 s timer, pays coins per mate (reuses Match)
 tests/              node scripts (see below)
-marketing/          itch.io cover, screenshots and page text (ITCH_PAGE.md)
+marketing/          itch.io cover, screenshots, page text (ITCH_PAGE.md); cast-gif.js renders readme/cast.gif for the README
 dist/               the zip uploaded to itch.io
 ```
 
