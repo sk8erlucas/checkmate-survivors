@@ -7,7 +7,7 @@
 'use strict';
 const D = {};
 
-D.VERSION = '0.8.0';        // shown on the title screen (early alpha)
+D.VERSION = '0.9.0';        // shown on the title screen (early alpha)
 
 D.TYPE = { p: 1, n: 2, b: 3, r: 4, q: 5 };            // chess.js piece types
 D.MAX_ARMY = { p: 8, n: 2, b: 2, r: 2, q: 1 };         // never exceed a standard army
@@ -88,6 +88,26 @@ D.SCENARIOS = [
   { id: 'deepmateq', diff: 'hard',   fen: '8/4K3/7k/8/8/5Q2/8/8 w - - 0 1',                obj: { type: 'mateIn', n: 3 },        time: 75,  style: 'balanced' },
   { id: 'deepmater', diff: 'hard',   fen: '8/R7/8/8/8/4K3/7k/8 w - - 0 1',                 obj: { type: 'mateIn', n: 3 },        time: 75,  style: 'balanced' },
   { id: 'lastwall',  diff: 'hard',   fen: '6k1/5ppp/8/4q3/8/8/5PPP/3R2K1 w - - 0 1',       obj: { type: 'survive', n: 12 },      time: 90,  style: 'aggressive' },
+];
+
+// achievements: unlocked once, each pays Crowns (local: itch.io has no achievements API for HTML games)
+D.ACHIEVEMENTS = [
+  { id: 'firstWin',    crowns: 5,  shape: 'duel',    color: '#e8c84a' },
+  { id: 'promote',     crowns: 5,  shape: 'gem',     color: '#ffe066' },
+  { id: 'bullet',      crowns: 5,  shape: 'watch',   color: '#ff7a6a' },
+  { id: 'step5',       crowns: 5,  shape: 'scenario', color: '#7ac0f0' },
+  { id: 'puzzles',     crowns: 10, shape: 'scenario', color: '#58c47a' },
+  { id: 'queenHunter', crowns: 10, shape: 'boss',    color: '#e87aa8' },
+  { id: 'rush10',      crowns: 10, shape: 'rush',    color: '#ff7a6a' },
+  { id: 'rich',        crowns: 10, shape: 'coin',    color: '#f0d060' },
+  { id: 'daily',       crowns: 10, shape: 'watch',   color: '#7fe0e8' },
+  { id: 'arena',       crowns: 15, shape: 'arena',   color: '#ffb347' },
+  { id: 'elite',       crowns: 15, shape: 'shield',  color: '#e0524f' },
+  { id: 'fullArmy',    crowns: 20, shape: 'gem',     color: '#b57cff' },
+  { id: 'noPotions',   crowns: 20, shape: 'potion',  color: '#9aa0b0' },
+  { id: 'collector',   crowns: 25, shape: 'bag',     color: '#a07850' },
+  { id: 'boss',        crowns: 30, shape: 'boss',    color: '#b57cff' },
+  { id: 'bestiary',    crowns: 30, shape: 'eye',     color: '#7ac0f0' },
 ];
 
 // permanent upgrades bought with Crowns after a run ends

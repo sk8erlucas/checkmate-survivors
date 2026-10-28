@@ -1,7 +1,7 @@
 # Checkmate Survivors — Documento de diseño
 
 > Roguelite 2D de **ajedrez real** en pixel art. HTML5 + JavaScript puro, pensado para subirse a **itch.io**.
-> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.8.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
+> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.9.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
 > **Publicado** en itch.io: <https://fibonaku.itch.io/checkmate-survivors>
 
 ---
@@ -55,7 +55,9 @@ Motor propio (`js/chess.js`), validado con **perft** (conteo de nodos de posicio
 | 7 | **Fogata y Tienda** (descanso antes del jefe) |
 | Jefe | **The Hourglass Lich / El Liche del Reloj** (ladrón de tiempo) |
 
-Cada nodo se conecta con 1–2 del paso siguiente (estilo *Slay the Spire*, en horizontal). Antes de entrar se muestra un detalle con rival, estilo, dificultad, objetivo, reloj y recompensa estimada.
+Cada nodo se conecta con 1–2 del paso siguiente (estilo *Slay the Spire*, en horizontal).
+
+**Sin repeticiones (v0.9):** a lo largo de un camino nunca hay dos nodos seguidos del mismo tipo no combativo (tienda→tienda, fogata→fogata, evento→evento, Mate Rush, Arena o élite): se cambia el que no está fijado por las reglas del paso. Tampoco se repite el **mismo monstruo** en nodos conectados, y los rivales se reparten priorizando los menos usados en la run. La generación va en cuatro fases: tipos, conexiones, corrección de repeticiones y detalles. Antes de entrar se muestra un detalle con rival, estilo, dificultad, objetivo, reloj y recompensa estimada.
 
 **El mapa** se dibuja como un tablero oscuro: cada nodo es un medallón (retrato del monstruo en duelos y jefe, ícono en el resto) con el anillo del color de su dificultad o tipo, caminos curvos (el disponible en dorado animado, el recorrido en violeta), un rey marcando dónde estás, ✓ en los nodos superados y una leyenda. Se desplaza solo hasta tus opciones.
 
@@ -72,6 +74,7 @@ Probabilidad de dificultad por paso (fácil / normal / difícil): paso 1 100/0/0
 - **Tienda**: pociones, 1 amuleto y piezas (peón/otra pieza, dama a veces). Botones de precio dorados con ícono de moneda (en gris y con "no alcanza" si no te da la plata). **Renovar** el stock: la primera vez gratis, después 10, 20, 30... monedas. Comprar suena con una caja registradora.
 - **Premios**: la pantalla de premios también se puede **renovar** (1ª gratis, después 10, 20...), solo antes de elegir el primero.
 - **Mate Rush** (bonus): 60 s de mates en 1 seguidos; cada mate da monedas (sección 17).
+- **Élite** (pasos 5–6, opcional): un monstruo difícil con su rasgo; paga ×1.3 monedas y el premio siempre incluye un amuleto (si quedan). Se marca con una etiqueta roja "Élite".
 - **Arena**: 3 duelos cortos seguidos; cada victoria paga en el momento, podés retirarte entre rondas y perder solo termina la Arena (sección 17).
 - **Evento**: decisiones con riesgo (El Apostador, El Viejo Relojero, El Ermitaño, El Pozo Extraño, El Prestamista).
 - **Fogata**: elegir una: +1 Reintento (máx. 3), +1 peón, o una poción.
@@ -325,7 +328,7 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 
 ---
 
-## 11. Estado (v0.8.0 · Early Alpha) y hoja de ruta
+## 11. Estado (v0.9.0 · Early Alpha) y hoja de ruta
 
 **Hecho:** motor completo, IA con 6 estilos, mapa ramificado, 4 tipos de objetivo, relojes, 6 pociones, 7 reliquias, 5 eventos, tienda, fogata, jefe, 10 puzzles, tienda permanente, guardado, EN/ES, sonido.
 **v0.2:** retratos animados de rivales con barra de vida, daño, reacciones y frases; nueva dama; tarjetas rediseñadas; guardar/continuar run.
@@ -335,16 +338,16 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 **v0.6.0:** los primeros pasos son **mayormente puzzles** (5 puzzles fáciles nuevos, 15 en total); **más monedas** por victoria; **renovar premios**; nuevo modo **Mate Rush** (sección 17).
 **v0.7.0:** Mate Rush deja de ser un modo aparte y pasa a ser un **nodo bonus del mapa** (60 s, monedas por mate, uno garantizado en el paso 3). Las demás ideas de modos se replantean como nodos de la run (sección 17).
 **v0.8.0:** **resolución fija de 1280×720** escalada a la ventana, con scroll interno (arregla tiendas y pantallas largas que no se podían recorrer, sección 18); nodo **Arena**; **historial de runs** (paso alcanzado y quién te venció) para balancear, con la última run en el menú.
+**v0.9.0:** **16 logros** (pagan Coronas); **Run del día** con mapa fijo por fecha; nodo **Élite**; pantalla de **Opciones** (sonido, música, menos animaciones, piezas enemigas clásicas); el mapa ya no repite nodos no combativos ni monstruos en caminos conectados.
 
 **Pendiente / ideas (por prioridad):**
-1. **Balance con partidas humanas**: el autor sigue sintiéndolo difícil. Ya se registra en `meta.stats.history` en qué paso termina cada run y contra quién (v0.8); falta mirar esos datos tras varias runs y ajustar (sección 12).
-2. Pieza "estrella" por monstruo con efecto visual (la dama araña deja telaraña) y temas musicales por monstruo.
-3. **Actos 2 y 3** (sección 14).
-4. Eventos con monstruos y más puzzles (mate en 3–4, finales de peones, tácticas).
-5. Desafío diario con semilla fija, logros y estadísticas (sección 15).
-6. Opciones: reducir animaciones, piezas enemigas "clásicas", tamaño de tablero (sección 16).
-7. Pulido móvil (tablero táctil, layouts verticales).
-8. Mejoras de IA: libro de aperturas corto, mejor manejo de finales de peones.
+1. **Actos 2 y 3** (sección 14): el trabajo grande que queda. Incluye monstruos nuevos (retrato, facción, rasgo y frases), paletas de fondo y temas por acto, el Nigromante y el Rey Sombra, Mate Rush de mates en 2 y la fogata grande entre actos.
+2. **Pieza "estrella" por monstruo** con efecto visual (la dama araña deja telaraña) y tema musical por monstruo.
+3. **Eventos con monstruos** y más puzzles (mate en 3–4, finales de peones, tácticas).
+4. **Escenario vertical 720×1280 para celular** (sección 18) y controles táctiles.
+5. **Volumen** con deslizadores (hoy hay interruptores de sonido y música).
+6. Mejoras de IA: libro de aperturas corto, mejor manejo de finales de peones.
+7. Revisar `meta.stats.history` después de varias runs del autor para afinar el balance (sección 12).
 
 **Preguntas abiertas para el autor**
 - ¿El triple empate/50 jugadas debe contar como derrota o dar un premio de consuelo?
@@ -397,17 +400,48 @@ El rasgo se ve en el detalle del nodo, debajo del nombre del rival (★) y en la
 - Cada acto suma un paso al mapa y su propia paleta de fondo y tema musical. Entre actos, una **fogata grande**: curar 1 Reintento + elegir un amuleto de 3.
 - **Composición temática de ejércitos** (sin salir del máximo estándar): algunos monstruos prefieren ciertas piezas. El caballero sin cabeza tiene caballos, el gólem torres y la bruja alfiles.
 
-## 15. Desafío diario, logros y estadísticas
-- **Desafío diario**: semilla fija por fecha (mapa, rivales y premios iguales para todos). Un intento por día y un puntaje = nodos × 10 + victorias × 25 + tiempo restante promedio. Tabla local de los últimos 7 días.
-- **Logros** (locales, se muestran en el menú): "Primera sangre" (primera captura), "Coronación" (coronar un peón), "Sin pociones" (ganar una run sin usarlas), "Bullet master" (ganar 3 batallas bullet en una run), "Cazador de monstruos" (vencer a los 10), "El tiempo es mío" (robarle 30 s al rival en una partida).
-- **Estadísticas**: paso donde termina cada run, rival que más te venció, piezas comidas por tipo. Además sirven para balancear (sección 12).
+## 15. Run del día, logros y estadísticas (implementado en v0.9)
+### Run del día
+- Botón **Run del día (fecha)** en el menú, debajo de *Comenzar run*. **No es un modo aparte**: es una run normal cuyo **mapa** (tipos de nodo, conexiones, monstruos, puzzles y eventos) se genera con una **semilla fija por fecha** (`seeded(AAAAMMDD)` en `run.js`). Todos los que juegan ese día ven el mismo mapa.
+- Los premios, la tienda y la IA siguen siendo aleatorios, para que la partida no se resuelva memorizándola.
+- Se guarda el **mejor paso alcanzado del día** (`meta.daily`) y se muestra en el botón. Terminar una cuenta para el logro *Dosis diaria*.
 
-## 16. Opciones y accesibilidad (propuesta)
-- **Reducir animaciones**: sin temblor de tablero ni destellos; partículas mínimas.
-- **Piezas enemigas clásicas**: usar el set carmesí en vez de las facciones, para quien prefiera claridad total.
-- **Volumen** separado de música y efectos (hoy son interruptores).
-- **Tamaño de tablero / modo vertical** para pantallas chicas.
-- **Coordenadas siempre visibles** y opción de mostrar la última jugada con flecha.
+### Logros
+itch.io **no tiene sistema de logros** para juegos HTML (su API solo cubre compras y descargas), así que son **locales** (`meta.ach`). Se desbloquean una vez, avisan con un cartel dorado y **pagan Coronas**, para que también empujen la meta-progresión. Pantalla *Logros (x/16)* en el menú, con los bloqueados en gris ("???" pero con la descripción visible).
+
+| Logro | Condición | Coronas |
+|---|---|---|
+| Primera sangre | Ganar una batalla | 5 |
+| Coronación | Coronar un peón | 5 |
+| A prueba de balas | Ganar una batalla bullet | 5 |
+| A mitad de camino | Superar un nodo del paso 5 o más | 5 |
+| Resolvedor | 5 puzzles (sumando runs) | 10 |
+| Cazadora de damas | Capturar 5 damas enemigas (sumando runs) | 10 |
+| Máquina de mates | 10 mates en un solo Mate Rush | 10 |
+| Tesoro | Juntar 200 monedas a la vez | 10 |
+| Dosis diaria | Terminar una run del día | 10 |
+| Campeón | Ganar las 3 rondas de una Arena | 15 |
+| Cazaélites | Vencer a un monstruo élite | 15 |
+| Ejército completo | Tener el ejército estándar completo | 20 |
+| Ajedrez puro | Vencer al jefe sin usar pociones en la run | 20 |
+| Coleccionista | Tener todos los amuletos permanentes | 25 |
+| Rompetiempos | Vencer al Liche del Reloj | 30 |
+| Cazamonstruos | Vencer a cada monstruo al menos una vez | 30 |
+
+Todos juntos suman 225 Coronas. Los contadores entre runs (puzzles, damas, monstruos vencidos) están en `meta.counts`.
+
+### Estadísticas
+`meta.stats.history` (últimas 30 runs: paso, nodos, victorias, quién te venció) y la última run en el menú (sección 12).
+
+## 16. Opciones y accesibilidad (implementado en v0.9)
+Botón **Opciones** en el menú (modal):
+- **Efectos de sonido** y **Música**: interruptores.
+- **Menos animaciones**: sin temblor de tablero, destellos ni partículas, y sin animaciones de reposo de retratos, medallas y fichas (`body.reduced` + `UI.reduced`).
+- **Piezas enemigas clásicas**: el set carmesí en lugar de las facciones de cada monstruo. El rasgo y el retrato del monstruo se mantienen (`UI.classic`).
+- **Pantalla completa.**
+- Se guarda en `meta.opts`.
+
+Pendiente: volumen con deslizadores, coordenadas siempre visibles, flecha de última jugada y el escenario vertical para celular (sección 18).
 
 ## 17. Todo dentro de la run (decisión del autor, v0.7)
 **No hay modos de juego aparte**: cada idea nueva entra como **parte del juego principal**, sobre todo como un tipo de nodo del mapa, para que alimente la misma run (monedas, piezas, amuletos).

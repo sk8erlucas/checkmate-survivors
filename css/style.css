@@ -243,6 +243,17 @@ h3.section { margin-top: 18px; color: var(--gold); letter-spacing: 2px; text-tra
 .avatar-stage.phase2 { box-shadow: 0 0 22px rgba(255,60,60,.7); --tc: #ff3b3b; }
 .avatar-stage.phase2 .portrait { filter: drop-shadow(0 0 7px rgba(255,60,60,.9)); }
 
+
+/* achievements, options, elite, daily */
+.toast.ach { border-color: var(--gold); background: linear-gradient(180deg, #4a3a18, #2a1f0c); color: #ffe08a; }
+.card.locked { opacity: .55; } .card.locked .cardicon img { filter: grayscale(1) brightness(.6); }
+.btn.opt { display: flex; justify-content: space-between; align-items: center; } .btn.opt b { color: var(--bad); } .btn.opt.on b { color: var(--good); }
+.node.elite .medal { border-width: 4px; box-shadow: 0 5px 0 #0e0a14, 0 0 14px rgba(224,82,79,.55); }
+.elite-tag { font-size: 10px; font-weight: 900; letter-spacing: 2px; color: #fff; background: var(--bad); border-radius: 4px; padding: 0 6px; }
+.btn.daily-btn { background: #24485a; border-color: #7fe0e8; } .btn.daily-btn:hover:not(:disabled) { background: #2e5a70; }
+body.reduced .portrait, body.reduced .pwrap, body.reduced .boardwrap, body.reduced .title-monster, body.reduced .medal, body.reduced .here { animation: none !important; }
+body.reduced .pwrap.hit-big::after { display: none; }
+
 /* Arena */
 .arena-steps { gap: 18px; margin: 16px 0; }
 .arena-step { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px; border: 2px solid var(--line); border-radius: 10px; background: var(--panel); min-width: 110px; }

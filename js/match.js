@@ -114,7 +114,7 @@ class Match {
     this.selected = -1; this.targets = null; this.lastMove = null; this.hintMove = null; this.threatSqs = null;
     this.started = false; this.over = false; this.thinking = false; this.paused = false; this.frozen = false; this.destroyed = false;
     this.anim = null; this.anim2 = null; this.fx = []; this.fall = null; this.flip = (this.pc === C.BLACK);
-    this.faction = SP.FACTIONS[this.enemy.id] ? this.enemy.id : 'rival';
+    this.faction = UI.classic ? null : SP.FACTIONS[this.enemy.id] ? this.enemy.id : 'rival';   // option: classic crimson pieces
     this.trait = D.ENEMIES.some(e => e.id === this.enemy.id) ? this.enemy.id : null;   // see TRAITS in docs
     this.hexed = null; this.petrified = false; this.howled = false; this.phase2 = false;
     this.legalMoves = this.pos.legal();
@@ -518,7 +518,7 @@ class Match {
   }
   pieceImg(p) { return SP.pieceCanvas(p, (p >> 3) === this.ec ? this.faction : null); }
   drawPiece(ctx, p, x, y) {
-    const glow = (p >> 3) === this.ec && SP.FACTIONS[this.faction].glow;
+    const glow = (p >> 3) === this.ec && this.faction && SP.FACTIONS[this.faction].glow;
     if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 10; }
     ctx.drawImage(this.pieceImg(p), x, y, SQ, SQ);
     if (glow) ctx.shadowBlur = 0;
@@ -535,8 +535,9 @@ class Match {
   }
   boom(sq, piece, val, big) {
     const [x, y] = this.xy(sq), t0 = performance.now();
-    const enemy = (piece >> 3) === this.ec, pal = enemy ? SP.factionPal(SP.FACTIONS[this.faction]) : null;
-    const colors = pal ? [pal[2], pal[3], pal[4], pal[9]] : ['#fffaf0', '#eadfc4', '#b5a07a', '#8a7650'];
+    if (UI.reduced) return;   // option: no particles, flashes or shake
+    const enemy = (piece >> 3) === this.ec, pal = enemy && this.faction ? SP.factionPal(SP.FACTIONS[this.faction]) : null;
+    const colors = pal ? [pal[2], pal[3], pal[4], pal[9]] : enemy ? ['#e5808c', '#b8384a', '#7e2331', '#561823'] : ['#fffaf0', '#eadfc4', '#b5a07a', '#8a7650'];
     this.fx.push(this.burst(x + 32, y + 32, colors, 10 + val * 3 + (big ? 20 : 0), 110 + val * 18));
     if (!big) this.fx.push({ kind: 'ghost', x, y, piece, t0, dur: 650 });
     this.fx.push({ kind: 'ring', cx: x + 32, cy: y + 32, r: 34 + val * 5, c: 'rgba(255,255,255,0.9)', t0, dur: 420 });

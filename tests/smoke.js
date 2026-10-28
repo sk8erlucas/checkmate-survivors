@@ -61,8 +61,9 @@ function structural() {
     if (L[7][0].type !== 'boss') { fail++; console.log('FAIL boss'); return; }
     if (!L[2].some(n => n.type === 'rush')) { fail++; console.log('FAIL step 3 needs a Mate Rush'); return; }
     if (!L[4].some(n => n.type === 'arena')) { fail++; console.log('FAIL step 5 needs an Arena'); return; }
+    for (let l = 0; l < 7; l++) for (const a of L[l]) for (const j of a.next) if ((a.type === L[l + 1][j].type && ['shop', 'rest', 'event', 'rush', 'arena', 'elite'].includes(a.type)) || (a.enemyId && a.enemyId === L[l + 1][j].enemyId)) { fail++; console.log('FAIL repeated node along a path', a.id, a.type); return; }
   }
-  ok(true, '300 random maps: every node has entrance/exit, a Mate Rush at step 3, shop+rest at step 4, an Arena at step 5, boss at the end');
+  ok(true, '300 random maps: every node has entrance/exit, a Mate Rush at step 3, shop+rest at step 4, an Arena at step 5, no shop->shop or same-monster repeats, boss at the end');
   let bad = 0;
   for (let pts = 1; pts <= 60; pts++) for (let q = 0; q < 2; q++) {
     const a = CS._test.buildEnemyArmy(pts, !!q);
@@ -147,7 +148,7 @@ async function fullRun(first) {
     kinds.add(node.type);
     const el = all(body).find(n => n.attrs && n.attrs['data-id'] === node.id);
     el.click(); findBtn('Go!').click();
-    if (node.type === 'duel' || node.type === 'boss' || node.type === 'scenario') {
+    if (node.type === 'duel' || node.type === 'boss' || node.type === 'scenario' || node.type === 'elite') {
       const m = CS.match; ok(!!m, 'match mounted for ' + node.type + ' ' + node.id);
       if (node.type === 'boss') m.enemy.thief = 3;
       await playMatch(m, { cheat: played >= 1 && node.type !== 'scenario', items: played === 0 }); played++;
@@ -243,6 +244,19 @@ async function objectives() {
   play(m, 'e4d5'); ok(m.over && m.result.reason === 'captured', 'capture objective: capturing N pieces wins');
   m.destroy();
 }
+async function extras() {
+  const t = CS._test, sig = m => m.layers.map(L => L.map(n => n.type + (n.enemyId || n.scenarioId || n.eventId || '')).join(',')).join('|');
+  t.setRand(t.seeded(20261027)); const m1 = t.genMap(); t.setRand(t.seeded(20261027)); const m2 = t.genMap(); t.setRand(t.seeded(20261028)); const m3 = t.genMap(); t.setRand(Math.random);
+  ok(sig(m1) === sig(m2) && sig(m1) !== sig(m3), 'daily run: the same date always builds the same map');
+  CS.meta = { crowns: 0, levels: {}, stats: { runs: 0, wins: 0, bestNodes: 0 }, opts: {}, ach: {}, counts: { puzzles: 0, queens: 0, beaten: {} }, daily: {} };
+  t.unlock('firstWin'); t.unlock('firstWin');
+  ok(CS.meta.crowns === 5 && CS.meta.ach.firstWin, 'an achievement unlocks once and pays its Crowns once');
+  CS.meta.opts.classic = true; ctx.UI.classic = true;
+  const mc = new ctx.Match({ fen: '4k3/8/8/8/8/8/8/4K3 w - - 0 1', playerColor: 0, enemy: { id: 'spider', style: 'balanced', tier: 'easy' }, objective: { type: 'mate', n: 0 },
+    time: { playerMs: 60000, enemyMs: 60000, playerInc: 0, enemyInc: 0 }, items: [], relics: [], onEnd() {} });
+  ok(mc.faction === null && mc.trait === 'spider', 'option: classic enemy pieces keeps the trait but drops the themed pieces');
+  ctx.UI.classic = false;
+}
 async function rushMode() {
   const R = ctx.Rush;
   let bad = 0;
@@ -265,7 +279,7 @@ async function rushMode() {
   R.finish(); ok(done && done.score === 1 && done.coins === 5, 'finishing Mate Rush pays coins per mate');
 }
 (async () => {
-  try { structural(); await objectives(); await rushMode(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
+  try { structural(); await extras(); await objectives(); await rushMode(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
   console.log(fail ? `\n${fail} FAILURES` : '\nALL SMOKE TESTS PASSED');
   process.exit(fail ? 1 : 0);
 })();

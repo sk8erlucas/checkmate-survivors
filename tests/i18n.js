@@ -20,6 +20,8 @@ for (const id of D.ENEMIES.map(e => e.id).concat('rival')) for (const k of ['int
 ['piece', 'potion', 'relic', 'coins', 'upgrade'].forEach(k => add('kind.' + k));
 D.SCENARIOS.forEach(s => { add('scenario.' + s.id + '.name'); add('scenario.' + s.id + '.desc'); });
 D.META.filter(u => !u.amulet).forEach(u => { add('meta.' + u.id + '.name'); add('meta.' + u.id + '.desc'); });
+['piece', 'potion', 'relic', 'coins', 'upgrade', 'achievement'].forEach(k => add('kind.' + k));
+D.ACHIEVEMENTS.forEach(a => { add('ach.' + a.id + '.name'); add('ach.' + a.id + '.desc'); });
 D.ENEMIES.forEach(e => { add('trait.' + e.id + '.name'); add('trait.' + e.id + '.desc'); });
 ['witch', 'spider', 'werewolf', 'goblin', 'lich', 'medusa'].forEach(t => add('toast.trait.' + t));
 ['pawn', 'knight', 'bishop', 'rook', 'queen'].forEach(p => add('piece.' + p));
