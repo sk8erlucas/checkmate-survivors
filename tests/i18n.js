@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path');
 const I = require('../js/i18n.js'), D = require('../js/data.js');
 const keys = new Set();
-for (const f of ['run.js', 'match.js', 'rush.js']) {
+for (const f of ['run.js', 'match.js', 'rush.js', 'ui.js']) {
   const src = fs.readFileSync(path.join(__dirname, '../js', f), 'utf8');
   for (const m of src.matchAll(/\bT\('([^']+)'/g)) if (!m[1].endsWith('.')) keys.add(m[1]);
 }
@@ -35,6 +35,8 @@ for (const [id, parts] of Object.entries(evs)) { add('event.' + id + '.title'); 
 add('event.res.left');
 for (const id of ['cauldron', 'mirror', 'golem']) ['title', 'desc'].forEach(k => add('event.' + id + '.' + k));
 ['cauldron.brew', 'cauldron.drink', 'cauldron.leave', 'cauldron.res.brewed', 'cauldron.res.drank', 'mirror.look', 'mirror.leave', 'mirror.res.copy', 'mirror.res.cursed', 'golem.pry', 'golem.sneak', 'golem.res.gem', 'golem.res.woke', 'golem.res.wokeCoins', 'golem.res.sneaked'].forEach(k => add('event.' + k));
+['act.forest', 'act.crypt', 'act.castle', 'map.act2', 'map.act3', 'end.final', 'end.finalText', 'end.victoryText', 'end.defeatText', 'act.choice', 'act.choice2', 'kind.monster'].forEach(add);
+['kraken', 'dragon', 'succubus', 'shadowking', 'mummy', 'golem', 'gargoyle', 'necromancer'].forEach(t => add('toast.trait.' + t));
 let miss = 0;
 for (const lang of ['en', 'es']) for (const k of keys) if (I.DICT[lang][k] === undefined) { miss++; console.log('MISSING', lang, k); }
 // placeholders must match between languages

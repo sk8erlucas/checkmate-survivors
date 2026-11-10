@@ -51,7 +51,7 @@ UI.fullscreen = function () {
 };
 UI.screen = function (el) {
   appEl.innerHTML = ''; appEl.appendChild(el); appEl.scrollTop = 0;
-  if (!el.classList.contains('match-screen')) UI.music('menu');   // battles switch to their own track on start
+  if (!el.classList.contains('match-screen')) UI.music(UI.bgm || 'menu');   // battles switch to their own track on start; UI.bgm = the act's theme
 };
 UI.modal = function (content) {
   const ov = h('div', { class: 'modal-overlay' }, h('div', { class: 'modal' }, content));
@@ -67,8 +67,15 @@ UI.toast = function (msg, kind) {
 // ---- sound ---------------------------------------------------------------
 // Everything is synthesized with WebAudio: effects are short tones/noise and
 // the music is a tiny step sequencer playing the tracks defined below.
-let actx = null, noiseBuf = null;
+let actx = null, noiseBuf = null, sfxBus = null, musBus = null, toMusic = false;
 UI.muted = false; UI.musicOn = true;
+UI.sfxVol = 0.8; UI.musVol = 0.8;   // 0..1, set from the options sliders
+// two master buses so effects and music have their own volume
+function bus() {
+  if (!sfxBus) { sfxBus = actx.createGain(); musBus = actx.createGain(); sfxBus.connect(actx.destination); musBus.connect(actx.destination); UI.setVolume(); }
+  return toMusic ? musBus : sfxBus;
+}
+UI.setVolume = function () { if (sfxBus) { sfxBus.gain.value = UI.sfxVol * 1.25; musBus.gain.value = UI.musVol * 1.25; } };
 UI.audioAvailable = () => !!(root.AudioContext || root.webkitAudioContext);
 function ac() {
   if (actx) return actx;
@@ -83,7 +90,7 @@ function tone(freq, dur, type, vol, at, toFreq) {
   o.type = type || 'square'; o.frequency.setValueAtTime(freq, t0);
   if (toFreq) o.frequency.exponentialRampToValueAtTime(toFreq, t0 + dur);
   g.gain.setValueAtTime(vol || 0.05, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  o.connect(g); g.connect(bus()); o.start(t0); o.stop(t0 + dur + 0.02);
 }
 function noise(dur, vol, at, hp) {
   const a = ac(); if (!a) return;
@@ -94,7 +101,7 @@ function noise(dur, vol, at, hp) {
   const t0 = at || a.currentTime, src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
   src.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = hp || 800;
   g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  src.connect(f); f.connect(g); g.connect(a.destination); src.start(t0); src.stop(t0 + dur + 0.02);
+  src.connect(f); f.connect(g); g.connect(bus()); src.start(t0); src.stop(t0 + dur + 0.02);
 }
 const later = s => (ac() ? actx.currentTime + s : 0);
 const SFX = {
@@ -116,7 +123,7 @@ const SFX = {
   reroll: () => { for (let i = 0; i < 6; i++) tone(300 + i * 90, 0.04, 'square', 0.03, later(i * 0.035)); noise(0.06, 0.04, later(0.2), 3000); },
   hex: () => { tone(620, 0.3, 'sine', 0.05, 0, 180); tone(930, 0.3, 'sine', 0.03, later(0.05), 270); },
 };
-UI.sfx = function (name) { if (UI.muted || !SFX[name]) return; try { SFX[name](); } catch (e) { /* audio not available */ } };
+UI.sfx = function (name) { if (UI.muted || !UI.sfxVol || !SFX[name]) return; try { SFX[name](); } catch (e) { /* audio not available */ } };
 
 // ---- music ---------------------------------------------------------------
 // A track: tempo, chords per bar ([bass root, ...triad]) and a melody per bar
@@ -149,6 +156,21 @@ const TRACKS = {
       [[0, 76, 2], [2, 77, 2], [4, 76, 2], [6, 74, 2], [8, 76, 8]], [[0, 77, 2], [2, 79, 2], [4, 77, 2], [6, 76, 2], [8, 72, 8]],
       [[0, 71, 2], [2, 72, 2], [4, 74, 2], [6, 76, 2], [8, 79, 4], [12, 77, 4]], [[0, 75, 4], [4, 78, 4], [8, 83, 4], [12, 78, 4]]] },
 };
+// act themes for the map and the screens between battles (slow, no drums)
+TRACKS.crypt = { bpm: 76, drums: false, soft: true,   // act 2: the Catacombs, D minor, hollow and slow
+  chords: [[38, 62, 65, 69], [34, 58, 62, 65], [36, 60, 64, 67], [33, 61, 64, 69]],
+  melody: [
+    [[0, 74, 6], [6, 72, 2], [8, 69, 8]], [[0, 70, 4], [4, 69, 4], [8, 65, 8]],
+    [[0, 67, 4], [4, 69, 2], [6, 70, 2], [8, 72, 8]], [[0, 73, 6], [6, 69, 2], [8, 64, 8]],
+    [[0, 77, 4], [4, 76, 4], [8, 74, 8]], [[0, 74, 4], [4, 70, 4], [8, 65, 4], [12, 67, 4]],
+    [[0, 64, 4], [4, 67, 4], [8, 72, 4], [12, 70, 4]], [[0, 69, 12], [12, 61, 4]]] };
+TRACKS.castle = { bpm: 88, drums: false,   // act 3: the Castle, E minor with a regal march feel
+  chords: [[40, 64, 67, 71], [36, 60, 64, 67], [38, 62, 66, 69], [35, 63, 66, 71], [40, 64, 67, 71], [45, 64, 69, 72], [47, 63, 66, 71], [40, 64, 67, 71]],
+  melody: [
+    [[0, 71, 4], [4, 71, 2], [6, 72, 2], [8, 74, 4], [12, 71, 4]], [[0, 72, 4], [4, 71, 2], [6, 69, 2], [8, 67, 8]],
+    [[0, 69, 4], [4, 66, 2], [6, 69, 2], [8, 74, 4], [12, 72, 4]], [[0, 71, 6], [6, 70, 2], [8, 66, 8]],
+    [[0, 76, 4], [4, 74, 2], [6, 72, 2], [8, 71, 4], [12, 67, 4]], [[0, 69, 4], [4, 72, 4], [8, 76, 6], [14, 74, 2]],
+    [[0, 75, 4], [4, 71, 4], [8, 66, 4], [12, 63, 4]], [[0, 64, 12], [12, 71, 4]]] };
 TRACKS.battle = Object.assign({}, TRACKS.rush, { bpm: 108 });   // blitz: same tune, relaxed tempo
 TRACKS.boss2 = Object.assign({}, TRACKS.boss, { bpm: 172 });    // the Lich's second phase
 const mus = { name: null, step: 0, next: 0, timer: null };
@@ -175,7 +197,7 @@ function pump() {
   const sd = 60 / tr.bpm / 4;
   if (mus.next < a.currentTime) mus.next = a.currentTime + 0.05;
   while (mus.next < a.currentTime + 0.15) {
-    if (!UI.muted && UI.musicOn && a.state === 'running') playStep(tr, mus.step, mus.next, sd);
+    if (!UI.muted && UI.musicOn && UI.musVol > 0 && a.state === 'running') { toMusic = true; try { playStep(tr, mus.step, mus.next, sd); } finally { toMusic = false; } }
     mus.step++; mus.next += sd;
   }
 }

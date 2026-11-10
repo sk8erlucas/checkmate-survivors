@@ -129,17 +129,25 @@ async function claimRewards() {
   await waitFor(() => pageText().includes('Choose your path'), 3000, 'map after rewards');
 }
 const kinds = new Set();
-let actTwoDone = false;
+let actTwoDone = false, blackDone = false;
 // after the Act 1 boss: the first time descend into Act 2 and check it, afterwards retire victorious
 async function actTwo() {
   ok(pageText().includes('Act 1 cleared'), 'beating the Act 1 boss opens the great campfire between acts');
   const am = buttons().find(b => b.className.includes('card pick') && !b.disabled); if (am) am.click();
   if (actTwoDone) { findBtn('Retire victorious').click(); ok(pageText().includes('VICTORY') || pageText().includes('Crowns earned'), 'retiring after Act 1 ends the run as a victory'); return; }
-  actTwoDone = true; findBtn('Descend to Act 2').click();
+  actTwoDone = true; findBtn('Continue to Act 2').click();
   const L = CS.run.map.layers, foes = L.flat().filter(n => n.enemyId).map(n => n.enemyId);
   ok(CS.run.act === 2 && L[7][0].enemyId === 'necromancer' && pageText().includes('Catacombs'), 'Act 2 map: the Catacombs with the Necromancer as boss');
   ok(foes.every(id => { const e = D.ENEMIES.find(x => x.id === id); return (e.act || 1) === 2 || e.tier === 'hard'; }), 'Act 2 only fields Catacomb monsters (plus act 1 hard ones)');
   for (let i = 0; i < 40; i++) { const m = CS._test.genMap(2); if (m.layers.flat().some(n => n.enemyId && !D.ENEMIES.some(e => e.id === n.enemyId))) { fail++; console.log('FAIL act 2 map with an unknown monster'); break; } }
+  // Act 2 cleared: the campfire leads up to the Castle
+  const boss2 = CS.run.map.layers[7][0]; CS._test.showActClear(boss2);
+  ok(pageText().includes('Act 2 cleared') && !!findBtn('Continue to Act 3'), 'beating the Act 2 boss opens the campfire towards Act 3');
+  findBtn('Continue to Act 3').click();
+  const L3 = CS.run.map.layers, foes3 = L3.flat().filter(n => n.enemyId).map(n => D.ENEMIES.find(e => e.id === n.enemyId));
+  ok(CS.run.act === 3 && L3[7][0].enemyId === 'shadowking' && pageText().includes('The Castle') && CS.meta.ach.act3, 'Act 3 map: the Castle with the Shadow King as boss (achievement unlocked)');
+  ok(foes3.every(e => (e.act || 1) === 3 || (e.tier === 'hard' && e.act === 2)), 'Act 3 only fields Castle monsters (plus the act 2 hard one)');
+  ok(!L3.flat().some(n => n.diff === 'easy'), 'Act 3 has no easy fights');
   findBtn('Abandon').click();
 }
 async function fullRun(first) {
@@ -159,10 +167,12 @@ async function fullRun(first) {
     if (!reach.length) break;
     const node = reach.find(n => !kinds.has(n.type)) || reach[(step * 5) % reach.length];
     kinds.add(node.type);
+    const blackNow = node.type === 'duel' && !blackDone && played >= 1; if (blackNow) { node.black = true; blackDone = true; }   // not the potion-test battle
     const el = all(body).find(n => n.attrs && n.attrs['data-id'] === node.id);
     el.click(); findBtn('Go!').click();
     if (node.type === 'duel' || node.type === 'boss' || node.type === 'scenario' || node.type === 'elite') {
       const m = CS.match; ok(!!m, 'match mounted for ' + node.type + ' ' + node.id);
+      if (blackNow) ok(m.pc === C.BLACK && m.flip && m.pos.board[60] === C.mk(C.KING, C.BLACK) && m.pos.turn === C.WHITE, 'a duel with Black: your king on e8, the board flipped and the monster moves first');
       if (node.type === 'boss') m.enemy.thief = 3;
       await playMatch(m, { cheat: played >= 1 && node.type !== 'scenario', items: played === 0 }); played++;
       if (m.result.win) { findBtn('Continue').click(); if (node.type === 'boss') { await sleep(10); await actTwo(); ended = true; break; } await claimRewards(); }
@@ -251,6 +261,13 @@ async function objectives() {
   m.useItem('hourglass'); ok(m.items.includes('hourglass'), 'a hexed potion cannot be used'); m.destroy();
   m = mk2('goblin', '4k3/8/8/8/8/2p5/1P6/4K3 b - - 0 1'); m.scheduleAI = () => {};
   m.doMove(m.legalMoves.find(x => C.sqName(C.mTo(x)) === 'b2'), false); ok(stolen === 2, 'goblin trait steals coins when it captures'); m.destroy();
+  m = mk2('kraken', '4k3/8/8/8/8/8/8/4K3 w - - 0 1'); ok(m.inc[1] === 2000, 'kraken trait: +2 s increment for the monster'); m.destroy();
+  m = mk2('succubus', '4k3/8/8/8/8/2b5/1N6/4K3 b - - 0 1', ['hourglass', 'thief']); m.scheduleAI = () => {};
+  m.doMove(m.legalMoves.find(x => C.sqName(C.mTo(x)) === 'b2'), false); ok(m.items.length === 1, 'succubus trait: capturing your knight steals a potion'); m.destroy();
+  m = mk2('dragon', '4k3/8/8/8/8/8/p7/4K3 b - - 0 1'); m.scheduleAI = () => {}; m.enemyMoves = 4; const c0 = m.clock[0];
+  m.doMove(m.legalMoves.find(x => C.sqName(C.mFrom(x)) === 'e8'), false); ok(m.clock[0] <= c0 - 4000, 'dragon trait: every 5th move burns 4 s of your clock'); m.destroy();
+  m = mk2('shadowking', '4k3/8/8/8/8/8/3r4/3QK3 w - - 0 1'); m.scheduleAI = () => {};
+  play(m, 'd1d2'); ok(m.phase2, 'Shadow King trait: below half health the eclipse begins'); m.destroy();
   m = mk2('spider', '4k3/8/8/8/2b5/8/4P3/4K3 w - - 0 1'); m.scheduleAI = () => {}; const before = m.clock[0];
   play(m, 'e2e3'); ok(m.clock[0] <= before - 1000, 'spider trait: moving an attacked piece costs a second'); m.destroy();
   m = mk('4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1', { type: 'capture', n: 1 });
@@ -269,6 +286,41 @@ async function extras() {
     time: { playerMs: 60000, enemyMs: 60000, playerInc: 0, enemyInc: 0 }, items: [], relics: [], onEnd() {} });
   ok(mc.faction === null && mc.trait === 'spider', 'option: classic enemy pieces keeps the trait but drops the themed pieces');
   ctx.UI.classic = false;
+}
+async function newStuff() {
+  // post-battle review finds the hanging queen you did not take
+  const m = new ctx.Match({ fen: '4k3/8/8/3q4/4P3/8/8/4K3 w - - 0 1', playerColor: 0, enemy: { id: 'slime', style: 'balanced', tier: 'easy', depth: 1, blunder: 0 }, objective: { type: 'mate', n: 0 },
+    time: { playerMs: 60000, enemyMs: 60000, playerInc: 0, enemyInc: 0 }, items: [], relics: [], onEnd() {} });
+  m.mount(new N('div')); m.begin(); m.scheduleAI = () => {};
+  const mv = uci => m.legalMoves.find(x => C.sqName(C.mFrom(x)) + C.sqName(C.mTo(x)) === uci);
+  m.doMove(mv('e1f1'), true); m.doMove(m.legalMoves.find(x => C.sqName(C.mTo(x)) === 'd7' || C.sqName(C.mTo(x)) === 'e7'), false); m.doMove(m.legalMoves[0], true);
+  m.showResult('x', 'y', [], true);
+  ok(m.el.overlay.textContent.includes('Review the game'), 'result card offers a review');
+  m.review(); await waitFor(() => m.reviewed, 8000, 'review');
+  ok(m.reviewed.played && m.reviewed.num === 1 && m.reviewed.bestSan === 'exd5' && m.reviewPos, 'review: finds the free queen you missed (exd5) and shows that position');
+  m.destroy();
+  ok(JSON.stringify(CS._test.cavalry({ p: 3, n: 1, b: 2, r: 0, q: 1 })) === JSON.stringify({ p: 3, n: 2, b: 0, r: 2, q: 0 }), 'Headless Knight trait: bishops become knights, the queen a rook');
+  CS.meta.counts.record = { slime: [2, 1] };
+  CS._test.showBestiary();
+  ok(pageText().includes('Bestiary') && pageText().includes('Gloop the Slime') && pageText().includes('Won 2') && pageText().includes('Not met yet'), 'bestiary shows met monsters with their record and hides the rest');
+  // volume sliders in the options
+  CS.init(); await sleep(5); findBtn('Options').click();
+  const inputs = all(body).filter(n => n.tagName === 'INPUT');
+  ok(inputs.length === 2, 'options have two volume sliders');
+  inputs[0].listeners.input[0]({ target: { value: '0' } }); inputs[0].listeners.change[0]();
+  ok(ctx.UI.sfxVol === 0 && ctx.UI.muted && CS.meta.opts.sfxVol === 0, 'sound slider at 0 mutes effects and is saved');
+  inputs[0].listeners.input[0]({ target: { value: '70' } }); inputs[0].listeners.change[0]();
+  ok(Math.abs(ctx.UI.sfxVol - 0.7) < 1e-9 && !ctx.UI.muted, 'moving the slider up unmutes');
+  findBtn('Close').click();
+  // Mate Rush in Act 3: mates in two
+  const R = ctx.Rush; let done = null;
+  R.start({ level: 0, perMate: 10, mate2: true, timeMs: 90000, onDone: (sc, c) => { done = { sc, c }; } }); await sleep(10);
+  const rm = R.state.match;
+  ok(rm && rm.obj.n === 2 && D.RUSH2.includes(rm.cfg.fen), 'Act 3 Mate Rush serves a mate in two');
+  rm.playerMove(AI.findMate(rm.pos, 2)); await waitFor(() => rm.pos.turn === rm.pc || rm.over, 3000, 'rush reply');
+  const mate = rm.legalMoves.find(x => { rm.pos.make(x); const st = rm.pos.gameStatus(); rm.pos.unmake(); return st.result === 'checkmate'; });
+  rm.playerMove(mate); await waitFor(() => R.state.score === 1, 3000, 'rush mate in two');
+  R.finish(); ok(done && done.sc === 1 && done.c === 10, 'solving a mate in two scores and pays');
 }
 async function rushMode() {
   const R = ctx.Rush;
@@ -292,7 +344,7 @@ async function rushMode() {
   R.finish(); ok(done && done.score === 1 && done.coins === 5, 'finishing Mate Rush pays coins per mate');
 }
 (async () => {
-  try { structural(); await extras(); await objectives(); await rushMode(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
+  try { structural(); await extras(); await newStuff(); await objectives(); await rushMode(); await fullRun(true); for (let i = 0; i < 8 && !['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)); i++) await fullRun(false); console.log('     node types visited:', [...kinds].join(', ')); ok(['duel', 'scenario', 'shop', 'event', 'rest', 'boss', 'rush', 'arena'].every(k => kinds.has(k)), 'all node types were played through the UI'); await endAndLanguage(); } catch (e) { fail++; console.log('EXCEPTION', e && e.stack || e); }
   console.log(fail ? `\n${fail} FAILURES` : '\nALL SMOKE TESTS PASSED');
   process.exit(fail ? 1 : 0);
 })();

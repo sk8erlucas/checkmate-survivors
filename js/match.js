@@ -182,7 +182,7 @@ class Match {
       this.cfg.note ? h('p', { class: 'note' }, this.cfg.note) : null,
       h('button', { class: 'btn primary', onclick: () => this.begin() }, T('match.begin'))));
   }
-  setOverlay(el) { this.el.overlay.innerHTML = ''; this.el.overlay.appendChild(el); this.el.overlay.classList.remove('hidden'); }
+  setOverlay(el) { this.el.overlay.innerHTML = ''; this.el.overlay.appendChild(el); this.el.overlay.classList.remove('hidden'); this.el.overlay.classList.remove('review'); }
   hideOverlay() { this.el.overlay.classList.add('hidden'); this.el.overlay.innerHTML = ''; }
 
   begin() {
@@ -194,6 +194,7 @@ class Match {
     UI.music(this.cfg.music || (this.enemy.tier === 'boss' ? 'boss' : 'battle'));
     if (this.trait === 'mummy') { this.clock[this.ec] += 20000; UI.toast(T('toast.trait.mummy'), 'bad'); }
     if (this.trait === 'golem') { this.clock[this.ec] += 30000; this.inc[this.ec] = 0; UI.toast(T('toast.trait.golem'), 'bad'); }
+    if (this.trait === 'kraken') { this.inc[this.ec] += 2000; UI.toast(T('toast.trait.kraken'), 'bad'); }
     if (this.trait === 'witch' && this.items.length) {
       this.hexed = this.items[Math.floor(Math.random() * this.items.length)];
       UI.toast(T('toast.trait.witch', { p: T('item.' + this.hexed + '.name') }), 'bad'); UI.sfx('hex'); this.avatar.taunt(false);
@@ -267,7 +268,7 @@ class Match {
     const order = [C.QUEEN, C.ROOK, C.BISHOP, C.KNIGHT];
     const btns = order.map(pt => {
       const m = ms.find(x => C.mPromo(x) === pt);
-      return h('button', { class: 'btn promo', onclick: () => { this.hideOverlay(); this.playerMove(m); } }, h('img', { src: SP.pieceURL(C.mk(pt, this.pc)) }));
+      return h('button', { class: 'btn promo', onclick: () => { this.hideOverlay(); this.playerMove(m); } }, h('img', { src: SP.pieceURL(C.mk(pt, C.WHITE)) }));
     });
     this.setOverlay(h('div', { class: 'overlay-card' }, h('h3', null, T('match.promote')), h('div', { class: 'row center' }, btns)));
   }
@@ -288,10 +289,11 @@ class Match {
     const san = this.pos.san(m);
     const webbed = byPlayer && this.trait === 'spider' && this.pos.isAttacked(from, this.ec);
     this.pos.make(m);
-    this.log.push({ san, mover: byPlayer ? 'p' : 'e', cap: capType, from, to });
+    this.log.push({ san, mover: byPlayer ? 'p' : 'e', cap: capType, from, to, m });
     const who = byPlayer ? this.pc : this.ec;
     this.clock[who] += this.inc[who];
     if (byPlayer) { this.playerMoves++; this.petrified = false; } else { this.enemyMoves++; this.frozen = false; }
+    if (!byPlayer && this.trait === 'dragon' && this.enemyMoves % 5 === 0) this.breathe();
     if (webbed) { this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 1000); this.floatText(to, '-1s', '#c8a0ff'); if (!this.webTold) { this.webTold = true; UI.toast(T('toast.trait.spider'), 'bad'); } }
     this.lastMove = { from, to };
     const t0 = performance.now();
@@ -311,9 +313,10 @@ class Match {
       this.boom(e.capSq, e.captured, val);
       this.floatText(e.capSq, (enemyLost ? '+' : '-') + val, enemyLost ? '#ffd84a' : '#ff6a6a');
       if (enemyLost) {
-        av.hurt(val, SP.pieceURL(e.captured, this.faction)); UI.sfx(val >= 5 ? 'death' : 'hit');
+        av.hurt(val, SP.pieceURL(this.look(e.captured), this.faction)); UI.sfx(val >= 5 ? 'death' : 'hit');
         if ((e.captured & 7) === C.QUEEN) av.say(line(id, 'queen'), 3200);
         if ((e.captured & 7) === C.QUEEN && this.trait === 'lich' && !this.phase2) this.lichPhase2();
+        if (this.trait === 'shadowking' && !this.phase2 && this.material(this.ec) * 2 < this.hpMax) this.eclipse();
         if (this.trait === 'necromancer' && !this.howled && this.material(this.ec) * 2 < this.hpMax) {
           this.howled = true; UI.toast(T('toast.trait.necromancer'), 'bad'); UI.sfx('warn'); av.taunt(false);
           if (!this.relics.includes('iron')) { const amt = Math.min(10000, Math.max(0, this.clock[this.pc] - 2000)); this.clock[this.pc] -= amt; this.clock[this.ec] += amt; }
@@ -324,6 +327,10 @@ class Match {
       } else {
         av.taunt(true); UI.sfx('hurt');
         if (this.trait === 'necromancer') { this.clock[this.ec] += 4000; this.floatText(e.capSq, '+4s', '#9aff7a'); }
+        if (this.trait === 'succubus' && (e.captured & 7) >= C.KNIGHT && this.items.length) {
+          const it = this.items.splice(Math.floor(Math.random() * this.items.length), 1)[0];
+          UI.toast(T('toast.trait.succubus', { p: T('item.' + it + '.name') }), 'bad'); UI.sfx('hex');
+        }
         if (this.trait === 'goblin' && this.cfg.onSteal) { const c = this.cfg.onSteal(2); if (c) UI.toast(T('toast.trait.goblin', { c }), 'bad'); }
         if (this.trait === 'vampire' && !this.relics.includes('iron')) { this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 2000); this.clock[this.ec] += 2000; this.floatText(e.capSq, '-2s', '#ff5a5a'); }
       }
@@ -342,6 +349,21 @@ class Match {
       if (!e.captured && !e.promo) { if (e.byPlayer) { av.shock(); av.chatty('check', 0.4); } else av.taunt(false); }
       if (!e.byPlayer && this.trait === 'banshee') { this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 3000); this.floatText(k, '-3s', '#8fd0d8'); }
     }
+  }
+  // the young dragon's fire breath: burns 4 s off your clock around your king
+  breathe() {
+    const k = this.pos.kingSq[this.pc], [x, y] = this.xy(k);
+    this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 4000);
+    this.floatText(k, '-4s', '#ff9a3a'); UI.sfx('hurt');
+    if (!UI.reduced) this.fx.push(this.burst(x + 32, y + 32, ['#ffd84a', '#ff9a3a', '#e0402a', '#7a2a1a'], 30, 120));
+    if (!this.fireTold) { this.fireTold = true; UI.toast(T('toast.trait.dragon'), 'bad'); }
+    this.avatar.taunt(false);
+  }
+  // the Shadow King's eclipse (below half health): steals 10 s and the music speeds up
+  eclipse() {
+    this.phase2 = true; this.avatar.stage.classList.add('phase2'); UI.music('boss2');
+    if (!this.relics.includes('iron')) { const amt = Math.min(10000, Math.max(0, this.clock[this.pc] - 2000)); this.clock[this.pc] -= amt; this.clock[this.ec] += amt; }
+    UI.toast(T('toast.trait.shadowking'), 'bad'); UI.sfx('warn');
   }
   lichPhase2() {
     this.phase2 = true; this.avatar.stage.classList.add('phase2'); UI.music('boss2');
@@ -463,9 +485,69 @@ class Match {
     setTimeout(() => { if (!this.destroyed) this.cfg.onEnd(res, this); }, 700);
   }
   showResult(title, text, buttons, good) {
+    this.resultArgs = [title, text, buttons, good];
+    const canReview = this.cfg.review !== false && this.log.filter(l => l.mover === 'p').length >= 2;
     this.setOverlay(h('div', { class: 'overlay-card ' + (good ? 'good' : 'bad') },
       h('h2', null, title), h('p', null, text),
-      h('div', { class: 'row center' }, buttons.map(b => h('button', { class: 'btn ' + (b.cls || ''), onclick: b.onClick }, b.label)))));
+      h('div', { class: 'row center' }, buttons.map(b => h('button', { class: 'btn ' + (b.cls || ''), onclick: b.onClick }, b.label))),
+      canReview ? h('button', { class: 'btn small review-btn', onclick: () => this.review() }, T('review.button')) : null));
+  }
+
+  // ---------------------------------------------------------------- post-battle review
+  // Replays the game and searches each of your moves to find the costliest one,
+  // then shows that position with your move (red) and a better one (gold).
+  // Runs in small chunks so the page never freezes.
+  review() {
+    if (this.reviewing) return;
+    UI.sfx('click');
+    if (this.reviewed) { this.showReview(this.reviewed); return; }
+    const prog = h('p', { class: 'muted' }, T('review.analyzing', { a: 0, n: 0 }));
+    this.setOverlay(h('div', { class: 'overlay-card' }, h('h3', null, T('review.title')), prog));
+    this.reviewing = true;
+    const pos = C.Position.fromFEN(this.cfg.fen), log = this.log, mine = log.filter(l => l.mover === 'p').length;
+    const clamp = v => Math.max(-3000, Math.min(3000, v)), opts = { depth: 3, timeMs: 60, style: 'balanced', blunder: 0 };
+    let i = 0, n = 0, worst = null;
+    const step = () => {
+      if (this.destroyed) return;
+      const t0 = performance.now();
+      while (i < log.length && performance.now() - t0 < 40) {
+        const l = log[i++];
+        if (l.mover === 'p') {
+          n++;
+          const best = pos.legal().length > 1 ? AI.choose(pos, opts) : null;
+          if (best && best.move !== l.m) {
+            const fen = pos.toFEN(), bestSan = pos.san(best.move);
+            pos.make(l.m);
+            const st = pos.gameStatus(), reply = st.over ? null : AI.choose(pos, opts);
+            const played = st.over ? (st.result === 'checkmate' ? AI.MATE : 0) : reply && reply.depth ? -reply.score : null;
+            pos.unmake();
+            const loss = played == null ? 0 : clamp(best.score) - clamp(played);
+            if (loss >= 150 && (!worst || loss > worst.loss)) worst = { loss, fen, played: l, best: best.move, bestSan, num: n, mate: best.score > AI.MATE - 100 };
+          }
+        }
+        pos.make(l.m);
+      }
+      prog.textContent = T('review.analyzing', { a: n, n: mine });
+      if (i < log.length) setTimeout(step, 0);
+      else { this.reviewing = false; this.reviewed = worst || { none: true }; this.showReview(this.reviewed); }
+    };
+    setTimeout(step, 30);
+  }
+  showReview(r) {
+    const back = () => { this.reviewPos = null; this.reviewArrows = null; this.showResult(...this.resultArgs); };
+    if (r.none) {
+      this.setOverlay(h('div', { class: 'overlay-card good' }, h('h3', null, T('review.title')), h('p', null, T('review.clean')),
+        h('button', { class: 'btn', onclick: back }, T('review.back'))));
+      return;
+    }
+    this.reviewPos = C.Position.fromFEN(r.fen);
+    this.reviewArrows = [{ from: r.played.from, to: r.played.to, c: 'rgba(224,82,79,0.9)' }, { from: C.mFrom(r.best), to: C.mTo(r.best), c: 'rgba(232,184,74,0.95)' }];
+    const gain = r.mate ? T('review.mate') : T('review.gain', { v: (r.loss / 100).toFixed(1) });
+    this.setOverlay(h('div', { class: 'overlay-card review-card' },
+      h('div', null, h('b', null, T('review.move', { n: r.num })), ' ', h('span', { class: 'bad' }, r.played.san), ' \u2192 ', T('review.better'), ' ', h('b', { class: 'gold' }, r.bestSan)),
+      h('div', { class: 'muted small' }, gain + ' ' + T('review.legend')),
+      h('button', { class: 'btn small', onclick: back }, T('review.back'))));
+    this.el.overlay.classList.add('review');
   }
 
   // ---------------------------------------------------------------- hud
@@ -481,8 +563,8 @@ class Match {
     e.capTop.innerHTML = ''; e.capBottom.innerHTML = '';
     for (const l of this.log) {
       if (!l.cap) continue;
-      if (l.mover === 'e') e.capTop.appendChild(h('img', { src: SP.pieceURL(C.mk(l.cap, this.pc)) }));
-      else e.capBottom.appendChild(h('img', { src: SP.pieceURL(C.mk(l.cap, this.ec), this.faction) }));
+      if (l.mover === 'e') e.capTop.appendChild(h('img', { src: SP.pieceURL(C.mk(l.cap, C.WHITE)) }));
+      else e.capBottom.appendChild(h('img', { src: SP.pieceURL(C.mk(l.cap, C.BLACK), this.faction) }));
     }
     let st;
     if (!this.started) st = T('match.ready');
@@ -525,7 +607,10 @@ class Match {
     this.draw();
     this.raf = requestAnimationFrame(() => this.drawLoop());
   }
-  pieceImg(p) { return SP.pieceCanvas(p, (p >> 3) === this.ec ? this.faction : null); }
+  // your pieces are always drawn in ivory and the monster's in its theme (or crimson),
+  // whichever side of the board each one plays
+  look(p) { return C.mk(p & 7, (p >> 3) === this.pc ? C.WHITE : C.BLACK); }
+  pieceImg(p) { return SP.pieceCanvas(this.look(p), (p >> 3) === this.ec ? this.faction : null); }
   drawPiece(ctx, p, x, y) {
     const glow = (p >> 3) === this.ec && this.faction && SP.FACTIONS[this.faction].glow;
     if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 10; }
@@ -579,9 +664,19 @@ class Match {
     ctx.globalAlpha = 1;
   }
 
+  arrow(ctx, from, to, color) {
+    const [x0, y0] = this.xy(from), [x1, y1] = this.xy(to);
+    const ax = x0 + 32, ay = y0 + 32, bx = x1 + 32, by = y1 + 32, ang = Math.atan2(by - ay, bx - ax);
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx - Math.cos(ang) * 14, by - Math.sin(ang) * 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx, by);
+    ctx.lineTo(bx - Math.cos(ang - 0.5) * 22, by - Math.sin(ang - 0.5) * 22);
+    ctx.lineTo(bx - Math.cos(ang + 0.5) * 22, by - Math.sin(ang + 0.5) * 22);
+    ctx.closePath(); ctx.fill();
+  }
   draw() {
     const ctx = this.ctx; if (!ctx) return;
-    const b = this.pos.board, now = performance.now();
+    const P = this.reviewPos || this.pos, b = P.board, now = performance.now();
     for (let sq = 0; sq < 64; sq++) {
       const [x, y] = this.xy(sq);
       ctx.fillStyle = (((sq & 7) + (sq >> 3)) & 1) ? COL.light : COL.dark;
@@ -593,23 +688,23 @@ class Match {
       ctx.fillText(String((this.flip ? i : 7 - i) + 1), 3, i * SQ + 12);
     }
     const fillSq = (sq, color) => { const p = this.xy(sq); ctx.fillStyle = color; ctx.fillRect(p[0], p[1], SQ, SQ); };
-    if (this.lastMove) { fillSq(this.lastMove.from, COL.last); fillSq(this.lastMove.to, COL.last); }
+    if (this.lastMove && !this.reviewPos) { fillSq(this.lastMove.from, COL.last); fillSq(this.lastMove.to, COL.last); }
     if (this.threatSqs) { this.threatSqs.mine.forEach(s => fillSq(s, COL.threatMine)); this.threatSqs.theirs.forEach(s => fillSq(s, COL.threatTheirs)); }
     if (this.selected >= 0) fillSq(this.selected, COL.sel);
-    if (!this.over && this.pos.inCheck()) {
-      const [x, y] = this.xy(this.pos.kingSq[this.pos.turn]);
+    if (!this.over && P.inCheck()) {
+      const [x, y] = this.xy(P.kingSq[P.turn]);
       const g = ctx.createRadialGradient(x + 32, y + 32, 4, x + 32, y + 32, 34);
       g.addColorStop(0, 'rgba(224,82,79,0.95)'); g.addColorStop(1, 'rgba(224,82,79,0)');
       ctx.fillStyle = g; ctx.fillRect(x, y, SQ, SQ);
     }
     const live = a => a && now - a.t0 < a.dur && b[a.to] ? a : null;
-    const anim = this.anim = live(this.anim), anim2 = this.anim2 = live(this.anim2);
+    const anim = this.anim = this.reviewPos ? null : live(this.anim), anim2 = this.anim2 = this.reviewPos ? null : live(this.anim2);
     for (let sq = 0; sq < 64; sq++) {
       const p = b[sq]; if (!p) continue;
       if ((anim && sq === anim.to) || (anim2 && sq === anim2.to)) continue;
       const [x, y] = this.xy(sq);
       ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(x + 32, y + 56, 20, 5, 0, 0, 6.3); ctx.fill();
-      if (this.fall && this.fall.sq === sq) {
+      if (this.fall && this.fall.sq === sq && !this.reviewPos) {
         const k = Math.min(1, (now - this.fall.t0) / 500), ease = 1 - (1 - k) * (1 - k);
         ctx.save(); ctx.translate(x + 50, y + 58); ctx.rotate(ease * 1.45); this.drawPiece(ctx, p, -50, -58); ctx.restore();
       } else this.drawPiece(ctx, p, x, y);
@@ -627,16 +722,8 @@ class Match {
         else { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(x + 32, y + 32, 9, 0, 6.3); ctx.fill(); }
       }
     }
-    if (this.hintMove) {
-      const [x0, y0] = this.xy(C.mFrom(this.hintMove)), [x1, y1] = this.xy(C.mTo(this.hintMove));
-      const ax = x0 + 32, ay = y0 + 32, bx = x1 + 32, by = y1 + 32, ang = Math.atan2(by - ay, bx - ax);
-      ctx.strokeStyle = 'rgba(232,184,74,0.9)'; ctx.fillStyle = 'rgba(232,184,74,0.9)'; ctx.lineWidth = 8; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx - Math.cos(ang) * 14, by - Math.sin(ang) * 14); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(bx, by);
-      ctx.lineTo(bx - Math.cos(ang - 0.5) * 22, by - Math.sin(ang - 0.5) * 22);
-      ctx.lineTo(bx - Math.cos(ang + 0.5) * 22, by - Math.sin(ang + 0.5) * 22);
-      ctx.closePath(); ctx.fill();
-    }
+    if (this.hintMove) this.arrow(ctx, C.mFrom(this.hintMove), C.mTo(this.hintMove), 'rgba(232,184,74,0.9)');
+    if (this.reviewArrows && this.reviewPos) for (const a of this.reviewArrows) this.arrow(ctx, a.from, a.to, a.c);
     this.drawFx(ctx, now);
   }
 }

@@ -32,7 +32,7 @@ function loadMeta() {
   CS.meta.stats = Object.assign({}, META_DEFAULT.stats, d.stats || {});
   root.I18N.setLang(CS.meta.lang || 'en'); UI.muted = !!CS.meta.muted; UI.musicOn = CS.meta.music !== false;
   CS.meta.opts = CS.meta.opts || {}; CS.meta.ach = CS.meta.ach || {}; CS.meta.daily = CS.meta.daily || {};
-  CS.meta.counts = Object.assign({ puzzles: 0, queens: 0, beaten: {} }, CS.meta.counts);
+  CS.meta.counts = Object.assign({ puzzles: 0, queens: 0, beaten: {}, record: {} }, CS.meta.counts);
   applyOpts();
 }
 function saveMeta() { CS.meta.muted = UI.muted; CS.meta.music = UI.musicOn; CS.meta.lang = root.I18N.getLang(); UI.store.save(CS.meta); }
@@ -58,6 +58,13 @@ function buildEnemyArmy(points, needQueen) {
   while (left > 0 && a.p < 8) { a.p++; left--; }
   return a;
 }
+// trait of the Headless Knight: only knights, rooks and pawns (bishops become knights, the queen a rook)
+function cavalry(a) {
+  const to = order => { const k = order.find(x => a[x] < D.MAX_ARMY[x]); if (k) a[k]++; else a.p = Math.min(D.MAX_ARMY.p, a.p + 2); };
+  while (a.b > 0) { a.b--; to(['n', 'r']); }
+  if (a.q) { a.q = 0; to(['r', 'n']); }
+  return a;
+}
 const PAWN_FILES = [3, 4, 2, 5, 1, 6, 0, 7];            // d e c f b g a h
 const HOME = { n: [6, 1], b: [5, 2], r: [7, 0], q: [3] };
 function placeArmy(board, army, color) {
@@ -66,9 +73,9 @@ function placeArmy(board, army, color) {
   for (let i = 0; i < army.p; i++) board[pr + PAWN_FILES[i]] = C.mk(C.PAWN, color);
   for (const k of ['n', 'b', 'r', 'q']) for (let i = 0; i < army[k]; i++) board[base + HOME[k][i]] = C.mk(D.TYPE[k], color);
 }
-function setupFEN(pa, ea) {
+function setupFEN(pa, ea, black) {   // black: the player takes the black side (the monster moves first)
   const b = new Array(64).fill(0);
-  placeArmy(b, pa, 0); placeArmy(b, ea, 1);
+  placeArmy(b, pa, black ? 1 : 0); placeArmy(b, ea, black ? 0 : 1);
   let s = '';
   for (let r = 7; r >= 0; r--) {
     let e = 0;
@@ -115,8 +122,10 @@ function randomPotion() { return weighted(Object.keys(D.POTIONS), id => D.POTION
 // ------------------------------------------------------------------ map generation
 const DIFF_W = [[100, 0, 0], [85, 15, 0], [60, 35, 5], [40, 45, 15], [25, 50, 25], [20, 45, 35]];
 const DIFF_W2 = [[0, 80, 20], [0, 70, 30], [0, 60, 40], [0, 55, 45], [0, 50, 50], [0, 45, 55]];   // act 2: no easy fights
+const DIFF_W3 = [[0, 70, 30], [0, 60, 40], [0, 55, 45], [0, 50, 50], [0, 45, 55], [0, 40, 60]];   // act 3: the castle
+const BOSS = { 1: 'lich', 2: 'necromancer', 3: 'shadowking' };
 function pickDiff(layer, act) {
-  const w = (act === 2 ? DIFF_W2 : DIFF_W)[Math.min(layer, 5)];
+  const w = (act === 3 ? DIFF_W3 : act === 2 ? DIFF_W2 : DIFF_W)[Math.min(layer, 5)];
   return weighted(['easy', 'normal', 'hard'], d => w[['easy', 'normal', 'hard'].indexOf(d)]);
 }
 const OBJ_W = {
@@ -129,6 +138,7 @@ const OBJ_W = {
 const PUZZLE_FIRST = [{ duel: 20, scenario: 80 }, { duel: 25, scenario: 40, event: 15, shop: 5, rest: 5, rush: 10 }];
 // node types that are pointless twice in a row (shop -> shop, campfire -> campfire...)
 const NO_REPEAT = new Set(['shop', 'rest', 'event', 'rush', 'arena', 'elite']);
+const BLACK_P = 0.2, BLACK_PAY = 1.15;   // chance that a duel is played with Black, and its coin bonus
 function genMap(act) {
   act = act || 1;
   const widths = [3, 2 + rnd(2), 3, 3, 2 + rnd(2), 2, 2, 1];
@@ -170,8 +180,10 @@ function genMap(act) {
   const usedScen = new Set(), usedEvents = new Set(), usedFoes = {};
   const pickEnemy = (n, tier) => {
     const avoid = new Set((n.layer ? layers[n.layer - 1].filter(a => a.next.includes(n.idx)) : []).map(a => a.enemyId));
-    const inAct = e => (e.act || 1) === act || (act === 2 && e.tier === 'hard');   // act 1's hard monsters also roam the Catacombs
+    const inAct = e => (e.act || 1) === act || (e.tier === 'hard' && (e.act || 1) === act - 1);   // the previous act's hard monsters follow you down
     let pool = D.ENEMIES.filter(e => e.tier === tier && inAct(e) && !avoid.has(e.id));
+    // every monster of this tier already leads here: borrow one from another tier (the node keeps its difficulty)
+    if (!pool.length) pool = D.ENEMIES.filter(e => e.tier !== 'boss' && inAct(e) && !avoid.has(e.id));
     if (!pool.length) pool = D.ENEMIES.filter(e => e.tier === tier && inAct(e));
     const least = Math.min(...pool.map(e => usedFoes[e.id] || 0)), id = pickOne(pool.filter(e => (usedFoes[e.id] || 0) === least)).id;
     usedFoes[id] = (usedFoes[id] || 0) + 1; return id;
@@ -182,8 +194,10 @@ function genMap(act) {
       n.tc = n.intro ? 'rapid' : pickOne(Object.keys(D.TIMECTRL));
       n.enemyId = pickEnemy(n, n.diff);
       n.objType = weighted(Object.keys(OBJ_W[n.intro ? 'intro' : n.diff]), t => OBJ_W[n.intro ? 'intro' : n.diff][t]);
+      if (!n.intro && l >= 2 && chance(BLACK_P)) n.black = true;   // now and then you play Black (the monster opens)
     } else if (n.type === 'elite') {     // optional mini-boss: a hard monster with a guaranteed amulet
       n.diff = 'hard'; n.tc = pickOne(['rapid', 'blitz']); n.enemyId = pickEnemy(n, 'hard'); n.objType = 'mate';
+      if (chance(BLACK_P)) n.black = true;
     } else if (n.type === 'scenario') {
       n.diff = pickDiff(l, act);
       const pool = D.SCENARIOS.filter(s => s.diff === n.diff && !usedScen.has(s.id));
@@ -193,7 +207,7 @@ function genMap(act) {
       const ids = Object.keys(EVENTS).filter(e => !usedEvents.has(e));
       n.eventId = pickOne(ids.length ? ids : Object.keys(EVENTS)); usedEvents.add(n.eventId);
     } else if (n.type === 'boss') {
-      n.diff = 'boss'; n.tc = 'blitz'; n.enemyId = act === 2 ? 'necromancer' : 'lich'; n.objType = 'mate';
+      n.diff = 'boss'; n.tc = 'blitz'; n.enemyId = BOSS[act]; n.objType = 'mate';
     }
   }));
   return { layers };
@@ -206,10 +220,10 @@ function reachable(run) {
 }
 
 // ------------------------------------------------------------------ rewards
-const actMult = () => (CS.run && CS.run.act === 2 ? 1.5 : 1);
+const actMult = () => 1 + 0.5 * ((CS.run && CS.run.act || 1) - 1);   // act 2 pays x1.5, act 3 x2
 function coinReward(node) {
   const run = CS.run, tc = D.TIMECTRL[node.tc] || { mult: 1 };
-  return Math.round((20 + node.layer * 4) * actMult() * (node.type === 'elite' ? 1.3 : 1) * D.DIFFS[node.diff].coin * tc.mult * (1 + 0.1 * lvl('purse')) * (run.relics.includes('lucky') ? 1.25 : 1));
+  return Math.round((20 + node.layer * 4) * actMult() * (node.type === 'elite' ? 1.3 : 1) * (node.black ? BLACK_PAY : 1) * D.DIFFS[node.diff].coin * tc.mult * (1 + 0.1 * lvl('purse')) * (run.relics.includes('lucky') ? 1.25 : 1));
 }
 function makeRewards(diff) {
   const run = CS.run, opts = [];
@@ -322,6 +336,8 @@ function unlock(id) {
 }
 function trackMatch(res, m, cfg, node) {
   const c = CS.meta.counts, mine = m.log.filter(l => l.mover === 'p');
+  c.record = c.record || {};
+  if (D.ENEMIES.some(e => e.id === cfg.enemy.id)) { const r = c.record[cfg.enemy.id] = c.record[cfg.enemy.id] || [0, 0]; r[res.win ? 0 : 1]++; }   // bestiary: wins / losses
   const queens = mine.filter(l => l.cap === C.QUEEN).length;
   if (queens) { c.queens += queens; if (c.queens >= 5) unlock('queenHunter'); }
   if (mine.some(l => l.san.includes('='))) unlock('promote');
@@ -331,8 +347,9 @@ function trackMatch(res, m, cfg, node) {
     if (node.type === 'scenario') { c.puzzles++; if (c.puzzles >= 5) unlock('puzzles'); }
     if (node.tc === 'bullet') unlock('bullet');
     if (D.ENEMIES.some(e => e.id === cfg.enemy.id)) { c.beaten[cfg.enemy.id] = 1; if (D.ENEMIES.every(e => c.beaten[e.id])) unlock('bestiary'); }
+    if (m.pc === C.BLACK) unlock('black');
     if (node.type === 'elite') unlock('elite');
-    if (node.type === 'boss') { unlock(cfg.enemy.id === 'necromancer' ? 'necromancer' : 'boss'); if (!CS.run.usedPotion) unlock('noPotions'); }
+    if (node.type === 'boss') { unlock({ lich: 'boss', necromancer: 'necromancer', shadowking: 'shadowking' }[cfg.enemy.id] || 'boss'); if (!CS.run.usedPotion) unlock('noPotions'); }
   }
   saveMeta();
 }
@@ -349,19 +366,53 @@ function showAchievements() {
     h('p', { class: 'muted' }, T('ach.intro')), h('div', { class: 'grid' }, cards), h('div', { class: 'row center' }, btn(T('back'), showTitle))));
 }
 
+// ------------------------------------------------------------------ bestiary
+const ACT_NAMES = ['act.forest', 'act.crypt', 'act.castle'];
+// Every monster you have met: portrait, act, trait and your record against it.
+// Unmet ones show as a dark silhouette.
+function showBestiary() {
+  const c = CS.meta.counts; c.record = c.record || {}; c.beaten = c.beaten || {};
+  const seen = e => !!(c.record[e.id] || c.beaten[e.id]);
+  const acts = [];
+  for (let a = 1; a <= D.ACTS; a++) acts.push(a);
+  const cardOf = e => {
+    const known = seen(e), rec = c.record[e.id] || [c.beaten[e.id] ? 1 : 0, 0], tier = D.DIFFS[e.tier];
+    return card('div', 'monster', known ? tier.color : '#4a3b66', h('img', { class: 'big-portrait still' + (known ? '' : ' unknown'), src: root.Portraits.url(e.id, rec[0] ? 'happy' : 'idle'), alt: '' }),
+      known ? T('enemy.' + e.id + '.name') : T('ach.locked'),
+      known ? h('span', null, h('span', { style: { color: tier.color } }, T('diff.' + e.tier)), ' \u00b7 ' + T('style.' + e.style)) : T('bestiary.unknown'),
+      known ? [h('div', { class: 'trait small' }, '\u2605 ' + T('trait.' + e.id + '.name') + ': ' + T('trait.' + e.id + '.desc')),
+        h('div', { class: 'tag' }, T('bestiary.record', { w: rec[0], l: rec[1] }))] : null, known ? 'owned' : 'locked');
+  };
+  const met = D.ENEMIES.filter(seen).length;
+  UI.screen(h('div', { class: 'screen' },
+    h('div', { class: 'row between' }, h('h2', null, T('bestiary.title')), h('div', { class: 'stat' }, h('b', null, met + ' / ' + D.ENEMIES.length))),
+    h('p', { class: 'muted' }, T('bestiary.intro')),
+    acts.map(a => [h('h3', { class: 'section' }, T(ACT_NAMES[a - 1])), h('div', { class: 'grid' }, D.ENEMIES.filter(e => (e.act || 1) === a).map(cardOf))]),
+    h('div', { class: 'row center' }, btn(T('back'), showTitle))));
+}
+
 // ------------------------------------------------------------------ options
 function applyOpts() {
   const o = CS.meta.opts;
   UI.reduced = !!o.reduced; UI.classic = !!o.classic;
+  UI.sfxVol = o.sfxVol != null ? o.sfxVol : 0.8; UI.musVol = o.musVol != null ? o.musVol : 0.8; UI.setVolume();
   if (document.body && document.body.classList) document.body.classList.toggle('reduced', UI.reduced);
 }
 function showOptions() {
   const m = CS.meta;
   const toggle = (label, on, flip) => h('button', { class: 'btn opt' + (on ? ' on' : ''), onclick: () => { flip(); saveMeta(); applyOpts(); md.close(); showOptions(); } },
     h('span', null, label), h('b', null, on ? T('opt.on') : T('opt.off')));
+  // volume sliders: 0 means silent; moving one also lifts the quick mute from the battle screen
+  const slider = (label, key, apply) => {
+    const val = h('b', null, Math.round(UI[key] * 100) + '%');
+    return h('label', { class: 'btn opt vol' }, h('span', null, label),
+      h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round(UI[key] * 100), oninput: ev => {
+        const v = +ev.target.value / 100; UI[key] = v; apply(v); UI.setVolume(); val.textContent = Math.round(v * 100) + '%';
+      }, onchange: () => { m.opts[key] = UI[key]; saveMeta(); UI.sfx('click'); } }), val);
+  };
   const md = UI.modal(h('div', null, h('h2', null, T('title.options')), h('div', { class: 'column' },
-    toggle(T('opt.sound'), !UI.muted, () => { UI.muted = !UI.muted; }),
-    toggle(T('opt.music'), UI.musicOn, () => { UI.musicOn = !UI.musicOn; }),
+    slider(T('opt.sound'), 'sfxVol', v => { UI.muted = v === 0; }),
+    slider(T('opt.music'), 'musVol', v => { UI.musicOn = v > 0; }),
     toggle(T('opt.reduced'), !!m.opts.reduced, () => { m.opts.reduced = !m.opts.reduced; }),
     toggle(T('opt.classic'), !!m.opts.classic, () => { m.opts.classic = !m.opts.classic; }),
     btn(T('ui.fullscreen'), UI.fullscreen)),
@@ -388,6 +439,7 @@ function startRunConfirm() {
 }
 function showTitle() {
   const m = CS.meta, lang = root.I18N.getLang(), saved = savedRun();
+  UI.bgm = null;
   UI.screen(h('div', { class: 'screen title' },
     h('div', { class: 'logo' }, h('div', { class: 'logo-1' }, 'CHECKMATE'), h('div', { class: 'logo-2' }, 'SURVIVORS')),
     h('div', { class: 'tagline' }, T('title.tagline')),
@@ -397,7 +449,9 @@ function showTitle() {
       btn(T('title.start'), startRunConfirm, saved ? '' : 'primary'),
       btn(T('title.daily', { d: today() }) + (m.daily.date === today() ? '  \u00b7 ' + T('title.dailyBest', { n: m.daily.best }) : ''), startDaily, 'daily-btn'),
       btn(T('title.shop') + '  (' + m.crowns + ' ' + T('crowns') + ')', showMetaShop),
-      btn(T('title.achievements', { a: Object.keys(m.ach).length, n: D.ACHIEVEMENTS.length }), showAchievements),
+      h('div', { class: 'row center' },
+        btn(T('title.achievements', { a: Object.keys(m.ach).length, n: D.ACHIEVEMENTS.length }), showAchievements),
+        btn(T('title.bestiary', { a: D.ENEMIES.filter(e => (m.counts.record || {})[e.id] || (m.counts.beaten || {})[e.id]).length, n: D.ENEMIES.length }), showBestiary)),
       h('div', { class: 'row center' },
         btn(T('title.how'), showHelp, 'small'),
         btn(T('title.options'), showOptions, 'small'),
@@ -438,6 +492,7 @@ function showMetaShop() {
 
 // ------------------------------------------------------------------ map
 function startRun() { CS.run = newRun(); showMap(); }
+const ACT_MUSIC = { 1: 'menu', 2: 'crypt', 3: 'castle' };   // the map and the screens between battles play the act's theme
 function nodeTitleText(n) {
   if (n.type === 'duel' || n.type === 'boss' || n.type === 'elite') return T('enemy.' + n.enemyId + '.name');
   if (n.type === 'scenario') return T('scenario.' + n.scenarioId + '.name');
@@ -457,7 +512,8 @@ function nodeEl(n, reach) {
     h('div', { class: 'nlabel' }, nodeTitleText(n)),
     (n.diff && n.type !== 'boss') || n.tc ? h('div', { class: 'nmeta' },
       n.diff && n.type !== 'boss' ? h('span', { style: { color: D.DIFFS[n.diff].color } }, T('diff.' + n.diff)) : null,
-      n.tc && n.type !== 'boss' ? h('span', { class: 'ntc' }, T('tc.' + n.tc)) : null) : null,
+      n.tc && n.type !== 'boss' ? h('span', { class: 'ntc' }, T('tc.' + n.tc)) : null,
+      n.black ? h('span', { class: 'nblack', title: T('node.blackTip') }, T('node.blackTag')) : null) : null,
     n.type === 'elite' ? h('div', { class: 'elite-tag' }, T('node.elite')) : null);
 }
 function legend() {
@@ -490,6 +546,7 @@ function sidePanel() {
 }
 function showMap() {
   const run = CS.run, reach = reachable(run);
+  UI.bgm = ACT_MUSIC[run.act || 1];
   if (run.coins >= 200) unlock('rich');
   if (D.PIECE_ORDER.every(k => run.army[k] >= D.MAX_ARMY[k])) unlock('fullArmy');
   saveRun();
@@ -497,9 +554,9 @@ function showMap() {
   const layers = h('div', { class: 'maplayers' }, run.map.layers.map((layer, l) =>
     h('div', { class: 'maplayer' }, h('div', { class: 'layerlabel' }, l === 7 ? T('map.boss') : T('map.step', { n: l + 1 })), layer.map(n => nodeEl(n, reach)))));
   const inner = h('div', { class: 'mapinner' }, svg, layers);
-  const wrap = h('div', { class: 'mapwrap' + (run.act === 2 ? ' act2' : '') }, inner);
+  const act = run.act || 1, wrap = h('div', { class: 'mapwrap' + (act > 1 ? ' act' + act : '') }, inner);
   UI.screen(h('div', { class: 'screen map' }, runHeader(),
-    h('div', { class: 'row between' }, h('h2', null, (run.act === 2 ? T('map.act2') + ' \u00b7 ' : '') + T('map.title')), h('p', { class: 'muted' }, run.cur ? T('map.choose') : T('map.chooseFirst'))),
+    h('div', { class: 'row between' }, h('h2', null, (act === 3 ? T('map.act3') + ' \u00b7 ' : act === 2 ? T('map.act2') + ' \u00b7 ' : '') + T('map.title')), h('p', { class: 'muted' }, run.cur ? T('map.choose') : T('map.chooseFirst'))),
     wrap, legend(), sidePanel()));
   requestAnimationFrame(() => {
     drawEdges(inner, svg, run, reach);
@@ -540,12 +597,13 @@ function openNode(n) {
     row(T('node.difficulty'), h('span', { style: { color: D.DIFFS[n.diff].color } }, T('diff.' + n.diff)));
     row(T('match.objective'), T('obj.' + n.objType, { n: objN(n.objType, n.diff) }));
     row(T('match.time'), tc.base + 's' + (tc.inc ? ' +' + tc.inc + 's' : '') + '  (' + T('tc.' + n.tc) + ')');
+    row(T('node.side'), n.black ? h('span', { class: 'nblack' }, T('node.black')) : T('node.white'));
     row(T('node.reward'), '~' + coinReward(n) + ' ' + T('coins') + ' + ' + T('node.rewardPick'));
   } else if (n.type === 'arena') {
     row(T('node.rounds'), ARENA.rounds.length);
     row(T('node.reward'), ARENA.rounds.map((_, i) => arenaPrize(n, i)).join(' / ') + ' ' + T('coins'));
   } else if (n.type === 'rush') {
-    row(T('node.duration'), Math.round(root.Rush.RUSH.timeMs / 1000) + 's');
+    row(T('node.duration'), Math.round(rushTime() / 1000) + 's' + (rushTwo() ? '  (' + T('rush.two') + ')' : ''));
     row(T('node.perMate'), '+' + rushPer(n) + ' ' + T('coins'));
   } else if (n.type === 'scenario') {
     const sc = D.SCENARIOS.find(s => s.id === n.scenarioId);
@@ -588,15 +646,16 @@ function startDuel(n) {
   const pv = armyValue(run.army);
   const bf = n.intro ? D.INTRO.budget : df.budget;
   const budget = Math.max(2, Math.round(pv * bf[0] + bf[1]));
-  const objType = (n.objType === 'captureQueen' && budget < 12) || (n.objType === 'promote' && !run.army.p) ? 'mate' : n.objType;
-  const ea = buildEnemyArmy(budget, objType === 'captureQueen');
+  const objType = (n.objType === 'captureQueen' && (budget < 12 || e.id === 'headless')) || (n.objType === 'promote' && !run.army.p) ? 'mate' : n.objType;
+  const ea = buildEnemyArmy(budget, objType === 'captureQueen' || e.id === 'shadowking');   // trait: the Shadow King always fields a queen
   if (e.id === 'skeleton' && ea.p < D.MAX_ARMY.p) ea.p++;   // trait: wall of bones
+  if (e.id === 'headless') cavalry(ea);
   const pieces = D.PIECE_ORDER.reduce((t, k) => t + ea[k], 0);
   launchMatch({
-    fen: setupFEN(run.army, ea), playerColor: 0,
+    fen: setupFEN(run.army, ea, n.black), playerColor: n.black ? 1 : 0,
     enemy: Object.assign({ id: e.id, style: e.style, tier: n.diff, thief: e.thief || 0, hourglass: e.hourglass || 0 }, n.intro ? { depth: D.INTRO.depth, blunder: D.INTRO.blunder } : {}),
     objective: { type: objType, n: objType === 'capture' ? Math.min(objN(objType, n.diff), pieces) : objN(objType, n.diff) }, time: timeFor(tc.base, tc.inc),
-    note: T('match.armyNote', { you: armyStr(run.army), foe: armyStr(ea) }),
+    note: T('match.armyNote', { you: armyStr(run.army), foe: armyStr(ea) }) + (n.black ? ' ' + T('match.blackNote') : ''),
     music: n.diff === 'boss' ? 'boss' : TC_MUSIC[n.tc],
     onSteal: c => { const t = Math.min(c, run.coins); run.coins -= t; return t; },
   }, n);
@@ -642,11 +701,13 @@ function onMatchEnd(res, m, cfg, node, snapshot) {
 }
 
 // ------------------------------------------------------------------ Mate Rush bonus node
-const rushPer = n => Math.round((4 + n.layer) * actMult() * (1 + 0.1 * lvl('purse')) * (CS.run.relics.includes('lucky') ? 1.25 : 1));
+const rushTwo = () => (CS.run.act || 1) >= 3;   // Act 3: mates in two, longer timer, double pay
+const rushTime = () => (rushTwo() ? 90000 : root.Rush.RUSH.timeMs);
+const rushPer = n => Math.round((4 + n.layer) * actMult() * (rushTwo() ? 2 : 1) * (1 + 0.1 * lvl('purse')) * (CS.run.relics.includes('lucky') ? 1.25 : 1));
 function startRush(n) {
   const run = CS.run;
   setPending('done', n);   // leaving in the middle forfeits the bonus instead of replaying it
-  root.Rush.start({ level: n.layer, perMate: rushPer(n), onDone: (score, coins) => {
+  root.Rush.start({ level: n.layer, perMate: rushPer(n), mate2: rushTwo(), timeMs: rushTime(), onDone: (score, coins) => {
     if (score >= 10) unlock('rush10');
     run.coins += coins; saveRun();
     if (coins) UI.sfx('buy');
@@ -666,7 +727,7 @@ function showArena(n) {
   const run = CS.run;
   setPending('done', n);   // leaving mid-arena keeps what you won but ends it
   const A = n.arena = n.arena || { round: 0, won: 0 };
-  if (!A.foes) A.foes = ARENA.rounds.map(r => pickOne(D.ENEMIES.filter(e => e.tier === (run.act === 2 && r.diff === 'easy' ? 'normal' : r.diff))).id);
+  if (!A.foes) A.foes = ARENA.rounds.map(r => pickOne(D.ENEMIES.filter(e => e.tier === ((run.act || 1) > 1 && r.diff === 'easy' ? 'normal' : r.diff))).id);
   saveRun();
   const steps = ARENA.rounds.map((r, i) => h('div', { class: 'arena-step' + (i < A.round ? ' won' : i === A.round ? ' next' : '') },
     h('img', { class: 'nodeimg', src: root.Portraits.url(A.foes[i], i < A.round ? 'ko' : 'idle'), alt: '' }),
@@ -722,11 +783,12 @@ function showActClear(node) {
     if (run.actOffer.some(x => x.taken)) return;   // one amulet only
     o.taken = true; applyReward(o); UI.sfx('buy'); saveRun(); showActClear(node);
   })));
+  const act = run.act || 1, nextAct = act + 1;
   UI.screen(h('div', { class: 'screen center-screen act-clear' }, runHeader(), icon('rest', '#ff9f5a', null, 'big'),
-    h('h2', null, T('act.cleared')), h('p', null, T('act.campfire')), cards,
-    h('p', { class: 'muted' }, T('act.choice')),
+    h('h2', null, T('act.cleared', { n: act })), h('p', null, T('act.campfire')), cards,
+    h('p', { class: 'muted' }, act === 1 ? T('act.choice') : T('act.choice2')),
     h('div', { class: 'row center' },
-      btn(T('act.descend'), () => { node.done = true; run.stats.nodes++; run.act = 2; run.actOffer = null; run.map = genMap(2); run.cur = null; run.pending = null; unlock('act2'); showMap(); }, 'primary'),
+      btn(T('act.descend', { n: nextAct }), () => { node.done = true; run.stats.nodes++; run.act = nextAct; run.actOffer = null; run.map = genMap(nextAct); run.cur = null; run.pending = null; unlock('act' + nextAct); showMap(); }, 'primary'),
       btn(T('act.retire'), () => { node.done = true; run.stats.nodes++; endRun(true); }))));
 }
 
@@ -857,8 +919,8 @@ function endRun(victory) {
   saveMeta(); CS.run = null; UI.store.saveRun(null);
   UI.sfx(victory ? 'win' : 'lose');
   UI.screen(h('div', { class: 'screen center-screen' },
-    h('h1', { class: victory ? 'good' : 'bad' }, T(victory ? 'end.victory' : 'end.defeat')),
-    h('p', null, T(victory ? 'end.victoryText' : 'end.defeatText')),
+    h('h1', { class: victory ? 'good' : 'bad' }, victory && (run.act || 1) >= D.ACTS ? T('end.final') : victory ? T('end.victory') : T('end.defeat')),
+    h('p', null, victory && (run.act || 1) >= D.ACTS ? T('end.finalText') : victory ? T('end.victoryText') : T('end.defeatText')),
     h('div', { class: 'panel' },
       h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.nodes')), h('b', null, run.stats.nodes)),
       h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.wins')), h('b', null, run.stats.wins)),
@@ -880,5 +942,5 @@ function showSplash() {
     h('div', { class: 'version' }, T('title.version', { v: D.VERSION }))));
 }
 CS.init = function () { loadMeta(); if (UI.audioAvailable()) showSplash(); else showTitle(); };
-CS._test = { unlock, startDaily, seeded, setRand: f => { rand = f; }, continueRun, savedRun, genMap, buildEnemyArmy, setupFEN, newRun, armyValue, makeRewards, EVENTS, reachable };
+CS._test = { cavalry, showActClear, showBestiary, unlock, startDaily, seeded, setRand: f => { rand = f; }, continueRun, savedRun, genMap, buildEnemyArmy, setupFEN, newRun, armyValue, makeRewards, EVENTS, reachable };
 })(window);

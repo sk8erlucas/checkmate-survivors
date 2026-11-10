@@ -257,6 +257,59 @@ const CHARS = {
       p.dots([[10, 3], [10, 2], [13, 2], [13, 1], [16, 1], [16, 0], [19, 2], [19, 1], [22, 3], [22, 2]], '#e8e0d0'); p.rect(10, 3, 13, 1, '#e8e0d0');
       p.line(9, 24, 16, 30, '#9aff7a'); p.line(23, 24, 16, 30, '#9aff7a'); p.ell(16, 30, 1.6, 1.6, '#e8e0d0');
     } },
+  // act 3: the Castle -----------------------------------------------------
+  headless: { skin: '#b07ae8', cloth: '#6a7488', brows: 'none', mouth: 'flat', lips: '#3a1a5a', eyeWhite: '#fffaf0', pupil: '#3a1a5a', ink: '#fffaf0',
+    body(p) {   // no head: armor, a ghostly flame above the collar and the helmet under its arm
+      const st = this.cloth;
+      p.ell(16, 33, 13.5, 9, st); p.ell(16, 33, 13.5, 9, dark(st, 0.3), x => x >= 22);
+      p.ell(7, 25, 4.5, 3.5, light(st, 0.15)); p.ell(25, 25, 4.5, 3.5, dark(st, 0.15));
+      p.rect(11, 21, 10, 3, dark(st, 0.35)); p.rect(12, 21, 8, 1, '#c89aff');
+      p.poly([[10, 21], [8, 14], [10, 8], [12, 11], [14, 3], [17, 8], [19, 2], [21, 10], [23, 7], [24, 14], [22, 21]], this.skin);
+      p.poly([[12, 21], [11, 15], [14, 11], [16, 15], [18, 10], [21, 15], [20, 21]], light(this.skin, 0.35));
+      p.ell(5.5, 28, 3.4, 3, '#8a94a8'); p.rect(3, 28, 5, 1, '#2a2e3a'); p.set(4, 26, '#c03040');
+      p.dots([[14, 27], [18, 27], [16, 29]], light(st, 0.35));
+    } },
+  succubus: { skin: '#e8a0be', hair: '#3a1030', cloth: '#5a1a3a', brows: 'flat', brow: '#3a1030', mouth: 'smirk', lips: '#a01848', sly: true, eyeWhite: '#ffd84a', pupil: '#3a1030',
+    back(p) {
+      p.poly([[9, 22], [1, 13], [0, 20], [2, 19], [3, 24], [5, 22], [7, 27]], '#4a1030'); p.poly(mirror([[9, 22], [1, 13], [0, 20], [2, 19], [3, 24], [5, 22], [7, 27]]), '#3a0c26');
+      p.ell(16, 17, 11, 12, this.hair);
+    },
+    over(p) {
+      p.ell(16, 7, 8.6, 3.6, this.hair, (x, y) => y <= 8); p.poly([[16, 5], [12, 10], [10, 6]], this.hair);
+      p.poly([[10, 6], [8, 1], [12, 4]], '#2a0a1a'); p.poly(mirror([[10, 6], [8, 1], [12, 4]]), '#2a0a1a');
+      p.dots([[10, 17], [21, 17]], '#f070a0');
+      p.poly([[12, 23], [16, 27], [20, 23]], '#c03070'); p.set(16, 24, '#ffd84a');
+    } },
+  kraken: { skin: '#2f8a8e', cloth: '#2f8a8e', brows: 'angry', brow: '#14484c', mouth: 'flat', lips: '#14484c', fy: -1, eyeWhite: '#ffe066', pupil: '#1a1022', ink: '#14484c',
+    body(p) {
+      const c = this.skin, sk = '#7fd8c8';
+      const arm = (x0, dir, ph) => { for (let i = 0; i <= 12; i++) { const t = i / 12; p.ell(x0 + dir * (t * 3) + Math.sin(t * 6 + ph) * 1.3, 18 + t * 13, 2.4 - t * 1.2, 1.5, i % 2 ? c : dark(c, 0.12)); } };
+      for (const [x, d, ph] of [[7, -1, 0], [11, -1, 2], [16, 0, 1], [21, 1, 3], [25, 1, 0.5]]) arm(x, d, ph);
+      p.ell(16, 11, 10, 10.5, c); p.ell(16, 11, 10, 10.5, dark(c, 0.22), (x, y) => x >= 22);
+      p.dots([[6, 24], [5, 27], [26, 24], [27, 27], [10, 29], [22, 29]], sk);
+      p.dots([[10, 4], [13, 3], [9, 7]], light(c, 0.4));
+    } },
+  dragon: { skin: '#d0603a', hair: '#6a2414', cloth: '#8a3418', wide: true, brows: 'angry', brow: '#4a1808', mouth: 'fangs', eyeWhite: '#ffd84a', pupil: '#1a1022',
+    back(p) {
+      p.poly([[3, 20], [0, 8], [5, 12], [7, 6], [10, 16]], '#8a3418'); p.poly(mirror([[3, 20], [0, 8], [5, 12], [7, 6], [10, 16]]), '#6a2414');
+      p.poly([[10, 7], [6, 0], [12, 4]], '#f0d8a0'); p.poly(mirror([[10, 7], [6, 0], [12, 4]]), '#c8b080');
+    },
+    over(p) {
+      p.ell(16, 19, 6, 3.6, light(this.skin, 0.2)); p.dots([[14, 17], [18, 17]], '#4a1808');
+      if (p.get(13, 21) !== null) { p.rect(12, 21, 8, 1, MOUTH); p.dots([[12, 22], [19, 22]], '#fffaf0'); }
+      p.dots([[9, 10], [10, 9], [22, 9], [23, 10], [12, 6], [16, 5], [20, 6]], this.hair);
+      p.dots([[10, 25], [14, 26], [18, 26], [22, 25], [12, 29], [20, 29]], '#ffd84a');
+    } },
+  shadowking: { skin: '#2a2040', cloth: '#3a2a5a', brows: 'angry', brow: '#120c20', mouth: 'flat', lips: '#ffd84a', eyeWhite: '#ffd84a', pupil: '#ffd84a', ink: '#ffd84a',
+    back(p) { p.ell(16, 16, 14.5, 14.5, '#1a1230'); p.ell(16, 14, 12.5, 12.5, this.cloth); },
+    over(p) {
+      hoodRim(p, this.cloth);
+      const g = '#e8b84a';
+      p.rect(9, 4, 14, 3, g); p.poly([[9, 4], [9, 0], [12, 3]], g); p.poly([[23, 4], [23, 0], [20, 3]], g); p.poly([[13, 4], [16, -1], [19, 4]], g);
+      p.dots([[12, 5], [16, 5], [20, 5]], '#b57cff'); p.set(16, 1, '#ff5a5a');
+      p.poly([[8, 23], [16, 31], [24, 23], [20, 22], [16, 26], [12, 22]], '#120c20'); p.rect(15, 26, 2, 2, g);
+      p.dots([[4, 8], [27, 6], [3, 20], [29, 18]], '#b57cff');
+    } },
   // puzzles ----------------------------------------------------------------
   rival: { skin: '#24202e', hair: '#33304a', cloth: '#2a2838', brows: 'flat', mouth: 'flat', eyeWhite: '#e8e0ff', pupil: '#b57cff', ink: '#e8e0ff', lips: '#0e0a14', brow: '#0e0a14',
     back(p) { p.ell(16, 14, 12, 12, this.hair); },

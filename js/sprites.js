@@ -206,6 +206,32 @@ const FACTIONS = {
     eyesOn(m, t, 9, true);
     for (let x = 4; x <= 11; x += 3) if (at(m, x, 12)) put(m, x, 12, 10);
   } },
+  // act 3: the Castle
+  headless: { color: '#6a7488', accent: '#c89aff', second: '#3e4658', mod(m, t) {   // no eyes: a ghostly flame burns above the armor
+    const y0 = topRow(m), [a, b] = span(m, y0), cx = Math.round((a + b) / 2);
+    add(m, cx, y0 - 1, 9); add(m, cx - 1, y0 - 1, 9); add(m, cx, y0 - 2, 9);
+    for (let x = 0; x < S; x++) if (at(m, x, 12) === 1 && x % 2) put(m, x, 12, 10);
+    sides(m, 13, (x, d) => add(m, x + d, 13, 10));
+  } },
+  succubus: { color: '#c04a8a', accent: '#ffd84a', second: '#4a1030', mod(m, t) {
+    eyesOn(m, t, 9);
+    const y0 = topRow(m), [a, b] = span(m, y0); add(m, a - 1, y0 - 1, 10); add(m, b + 1, y0 - 1, 10);
+    sides(m, 11, (x, d) => { add(m, x + d, 11, 10); add(m, x + 2 * d, 10, 10); add(m, x + 2 * d, 11, 10); add(m, x + d, 12, 10); });
+  } },
+  kraken: { color: '#2f8a8e', accent: '#ffe066', second: '#7fd8c8', mod(m, t) {
+    eyesOn(m, t, 9);
+    for (let x = 4; x <= 11; x += 2) if (at(m, x, 12)) put(m, x, 12, 10);
+    sides(m, 13, (x, d) => { add(m, x + d, 13, 1); add(m, x + 2 * d, 12, 1); add(m, x + 2 * d, 11, 10); });
+  } },
+  dragon: { color: '#c0502a', accent: '#ffd84a', second: '#6a2414', mod(m, t) {
+    eyesOn(m, t, 9);
+    const y0 = topRow(m), [a, b] = span(m, y0); add(m, a - 1, y0, 10); add(m, b + 1, y0, 10); add(m, a - 1, y0 - 1, 10); add(m, b + 1, y0 - 1, 10);
+    for (let y = 11; y <= 13; y++) for (let x = 0; x < S; x++) if (at(m, x, y) === 1 && (x + y) % 3 === 0) put(m, x, y, 10);
+  } },
+  shadowking: { color: '#4a3a72', accent: '#ffd84a', outline: '#08040e', glow: 'rgba(181,124,255,0.8)', second: '#e8b84a', mod(m, t) {
+    eyesOn(m, t, 9, true);
+    for (let x = 0; x < S; x++) if (at(m, x, 13) === 1) put(m, x, 13, 10);
+  } },
   rival: { color: '#625e80', accent: '#c89aff', mod(m, t) { eyesOn(m, t, 9); } },
 };
 function factionPal(f) { const p = palFor(f.color); p[9] = f.accent; p[10] = f.second || mix(f.color, '#000000', 0.55); if (f.outline) p[1] = f.outline; return p; }

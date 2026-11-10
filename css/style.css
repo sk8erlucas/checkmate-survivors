@@ -272,3 +272,15 @@ body.reduced .pwrap.hit-big::after { display: none; }
 h1.rush-title { font-size: 36px; }
 .rush .bar .clock { visibility: hidden; }
 
+.btn.opt.vol { gap: 12px; cursor: default; } .btn.opt.vol span { flex: 1; text-align: left; } .btn.opt.vol b { color: var(--gold); min-width: 44px; text-align: right; }
+.btn.opt.vol input { width: 170px; accent-color: var(--gold); cursor: pointer; }
+/* post-battle review: the card sits at the bottom so the board stays visible */
+.match-overlay.review { background: transparent; align-items: flex-end; pointer-events: none; }
+.match-overlay.review .overlay-card { pointer-events: auto; padding: 8px 14px; background: rgba(36,26,48,.94); display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.review-btn { margin-top: 8px; }
+.nblack { color: #1a1022; background: #d8d0e8; border-radius: 4px; padding: 0 5px; font-weight: bold; font-size: 11px; }
+.big-portrait.still { animation: none; width: 96px; height: 96px; margin-top: 4px; } .card.locked .cardicon img.unknown { filter: brightness(0) drop-shadow(0 0 2px #8a7ab0); }
+/* act 3: the Castle - flagstones with a royal purple glow */
+.mapwrap.act3 { border-color: #8a6ac8; background: radial-gradient(ellipse at center, rgba(181,124,255,.08) 0%, transparent 45%, rgba(8,4,14,.8) 100%), repeating-linear-gradient(0deg, #2a2236 0 26px, #1c1626 26px 28px), repeating-linear-gradient(90deg, transparent 0 54px, #1c1626 54px 56px); }
+.mapwrap.act3 .edges path.walked { stroke: #c89aff; }
+.rush-two { color: var(--gold); font-size: .7em; }

@@ -15,7 +15,7 @@ Everything you need to fill in the itch.io "Create new project" form. Copy each 
 | **Short description or tagline** | Real chess, roguelite runs, and a cast of monsters. Start with a king and a few pawns, and survive. |
 | **Classification** | Games |
 | **Kind of project** | HTML |
-| **Release status** | In development (early alpha, v0.10.1) |
+| **Release status** | In development (early alpha, v0.12.0) |
 | **Pricing** | No payments (or "Donate" if you want tips) |
 | **Uploads** | `dist/checkmate-survivors-html5.zip`, and tick **"This file will be played in the browser"** |
 | **Viewport dimensions** | **1280 × 720** (the game's fixed reference resolution; it scales to any window and letterboxes). Tick **Fullscreen button** (there is also an in-game Fullscreen button). Leave "Mobile friendly" off for now. |
@@ -43,20 +43,23 @@ You start with a king and a handful of pawns. Every step of the map is a choice:
 The rules of chess never change: real moves, castling, en passant and promotion. The roguelite part is everything around the board.
 
 ### Features
-- **Two acts**: the Haunted Woods and the Catacombs. Beat the Hourglass Lich and choose: retire victorious, or descend to face the Necromancer.
-- **15 monster opponents, each with its own AI personality.** Gloop the Slime blunders, Grabby the Goblin grabs every piece, Boo the Ghost turtles, the Widow Weaver attacks your king, Count Vlastor drains your clock...
+- **Three acts**: the Haunted Woods, the Catacombs and the Castle. After each boss, choose: retire victorious, or go on for bigger rewards. The Shadow King waits at the top of the Castle.
+- **20 monster opponents, each with its own AI personality.** Gloop the Slime blunders, Grabby the Goblin grabs every piece, Boo the Ghost turtles, the Widow Weaver attacks your king, Count Vlastor drains your clock...
 - **Every monster plays with its own pieces.** Spider pieces have legs and red eyes, the witch's pawns wear little hats, the vampire's have capes, and the Lich's glow.
 - **Every monster has a trait** that bends the clock or your purse, never the rules: the Goblin pickpockets your coins, the Spider's web costs you seconds, the Witch hexes one of your potions, Medusa's gaze speeds up your clock, and the Lich has a second phase.
 - **Animated opponents** that react to the game: they flinch when you capture, gloat when they take your pieces, panic when you check them and mourn their queen. Their army is their health bar.
 - **Juicy captures**: particles, flying pieces, screen shake and hit sounds. The mated king topples over.
 - **The clock is a resource.** Bullet, blitz or rapid battles; potions that add time, freeze the enemy clock or steal seconds, and monsters that steal them back.
 - **Varied objectives**: checkmate, mate in N, survive N moves, capture the queen, capture N pieces or promote a pawn.
+- **Play Black now and then**: some duels hand the first move to the monster, for extra coins.
+- **Battle review**: after a game, see your costliest move on the board next to a better one. A gentle way to learn.
+- **Bestiary**: every monster you have met, its trait and your record against it.
 - **Puzzles**: 15 hand-made positions, every one verified solvable. The first steps of a run are mostly puzzles, a quick way in.
-- **Mate Rush bonus nodes**: 60 seconds of random mate-in-one puzzles on the map. Every mate pays coins, every wrong move costs 10 seconds.
+- **Mate Rush bonus nodes**: 60 seconds of random mate-in-one puzzles on the map (mates in two in the Castle). Every mate pays coins, every wrong move costs 10 seconds.
 - **The Arena**: three short duels in a row for coins. Retire whenever you like; losing in the Arena doesn't end your run.
 - **Elite monsters**: optional tough fights that always offer an amulet.
 - **Daily run**: the same map for everyone, every day.
-- **18 achievements** that pay Crowns, and options for reduced animations and classic enemy pieces.
+- **21 achievements** that pay Crowns, and options for sound and music volume, reduced animations and classic enemy pieces.
 - **Potions and amulets**: rewind, oracle hints, threat vision, time thief, and more. Reroll the shop when you don't like the offer (the first reroll is free).
 - **Permanent upgrades and an amulet collection**: earn Crowns every run, unlock lives, extra pawns and starting pieces, and buy amulets once to start every run with them.
 - **A gentle start**: the first steps are warm-up battles against weak monsters with simple goals.
@@ -87,15 +90,18 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 
 ### Características
 - **Cada monstruo tiene un rasgo** que afecta el reloj o tus monedas, nunca las reglas: el goblin te roba monedas, la telaraña te cuesta segundos, la bruja hechiza una poción y el Liche tiene segunda fase.
-- **Dos actos**: el Bosque Embrujado y las Catacumbas. Vencé al Liche del Reloj y elegí: retirarte victorioso o bajar a enfrentar al Nigromante.
-- **15 monstruos rivales con personalidad de juego propia.** Gloop el Slime se equivoca, Grabby el Goblin come todo lo que puede, Buu el Fantasma se encierra, la Viuda Tejedora ataca a tu rey, el Conde Vlastor te drena el reloj...
+- **Tres actos**: el Bosque Embrujado, las Catacumbas y el Castillo. Después de cada jefe elegí: retirarte victorioso o seguir por premios mayores. Arriba del Castillo te espera el Rey Sombra.
+- **20 monstruos rivales con personalidad de juego propia.** Gloop el Slime se equivoca, Grabby el Goblin come todo lo que puede, Buu el Fantasma se encierra, la Viuda Tejedora ataca a tu rey, el Conde Vlastor te drena el reloj...
 - **Cada monstruo juega con sus propias piezas**: las de la araña tienen patas y ojos rojos, los peones de la bruja llevan sombrerito, los del vampiro, capa, y las del Liche brillan.
 - **Rivales animados** que reaccionan: se duelen cuando les comés, festejan cuando te comen, entran en pánico con el jaque y lloran a su dama. Su ejército es su barra de vida.
 - **Capturas con impacto**: partículas, piezas que salen volando, temblor y sonidos de golpe. El rey derrotado cae de costado.
 - **El reloj es un recurso**: batallas bullet, blitz o rápidas; pociones que suman tiempo, congelan el reloj rival o roban segundos, y monstruos que te los roban a vos.
 - **Objetivos variados**: mate, mate en N, sobrevivir, capturar la dama, capturar N piezas o coronar un peón.
+- **De vez en cuando jugás con negras**: algunos duelos le dan la primera jugada al monstruo, a cambio de más monedas.
+- **Repaso de la batalla**: al terminar, mirá en el tablero tu jugada más cara al lado de una mejor. Una forma amable de aprender.
+- **Bestiario**: cada monstruo que conociste, su rasgo y tu récord contra él.
 - **15 puzzles** hechos a mano y verificados; los primeros pasos de la run son mayormente puzzles.
-- **Nodos bonus Mate Rush**: 60 segundos de mates en 1 generados al azar dentro del mapa. Cada mate da monedas y cada error cuesta 10 segundos.
+- **Nodos bonus Mate Rush**: 60 segundos de mates en 1 generados al azar dentro del mapa (mates en 2 en el Castillo). Cada mate da monedas y cada error cuesta 10 segundos.
 - **La Arena**: tres duelos cortos seguidos por monedas. Retirate cuando quieras; perder en la Arena no termina tu run.
 - **Monstruos élite**: peleas difíciles y opcionales que siempre ofrecen un amuleto.
 - **Run del día**: el mismo mapa para todos, cada día.
@@ -111,7 +117,9 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 
 ## Devlog post (optional, for launch)
 
-> **Checkmate Survivors v0.10.0 is out!** Act 2 is here: descend into the Catacombs after beating the Lich. Four new monsters (Mummy, Banshee, Golem, Gargoyle), each with its own pieces and trait, and a new boss: the Necromancer.
+> **Checkmate Survivors v0.12.0 is out!** Act 3 is here: climb to the Castle after the Catacombs. Four new monsters (a headless knight who only plays knights and rooks, a succubus who steals your potions, a moat kraken and a young dragon who breathes fire on your clock) and the final boss, the Shadow King. Mate Rush serves mates in two in the Castle, and every act has its own music. v0.11 also added a post-battle review, duels with Black, a bestiary and volume sliders.
+
+> *(v0.10.0)* **Checkmate Survivors v0.10.0 is out!** Act 2 is here: descend into the Catacombs after beating the Lich. Four new monsters (Mummy, Banshee, Golem, Gargoyle), each with its own pieces and trait, and a new boss: the Necromancer.
 
 > *(v0.9.0)* **Checkmate Survivors v0.9.0 is out!** 16 achievements, a daily run with the same map for everyone, elite monsters, an options menu, and maps that no longer repeat shops or monsters back to back.
 

@@ -68,7 +68,7 @@ const coins = () => state.score * state.opts.perMate;
 function fmt(ms) { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function bar() {
   return h('div', { class: 'rush-bar panel' },
-    h('div', { class: 'rush-title' }, T('rush.title')),
+    h('div', { class: 'rush-title' }, T('rush.title'), state.opts.mate2 ? h('span', { class: 'rush-two' }, ' ' + T('rush.two')) : null),
     state.elTime = h('div', { class: 'clock rush-clock' }, fmt(state.left)),
     h('div', { class: 'rush-score' }, T('rush.score') + ' ', h('b', null, state.score)),
     h('div', { class: 'rush-score' }, h('img', { class: 'icon coin', src: root.Sprites.iconURL('coin', '#f0d060'), alt: '' }), ' ', h('b', null, '+' + coins())),
@@ -84,13 +84,13 @@ function tick() {
 function next() {
   if (state.over) return;
   if (state.match) { state.match.destroy(); state.match = null; }
-  const pz = generate(state.opts.level + state.score);
+  const two = state.opts.mate2, pz = two ? nextTwo() : generate(state.opts.level + state.score);
   const screen = h('div', { class: 'screen match-screen rush' }, state.opts.header ? state.opts.header() : null, bar());
   UI.screen(screen);
   const m = state.match = new root.Match({
     fen: pz.fen, playerColor: C.WHITE, enemy: { id: 'rival', style: 'balanced', tier: 'easy' },
-    objective: { type: 'mateIn', n: 1 }, time: { playerMs: 36e5, enemyMs: 36e5, playerInc: 0, enemyInc: 0 },
-    items: [], relics: [], music: 'rush', note: T('rush.note'),
+    objective: { type: 'mateIn', n: two ? 2 : 1 }, time: { playerMs: 36e5, enemyMs: 36e5, playerInc: 0, enemyInc: 0 },
+    items: [], relics: [], music: 'rush', note: two ? T('rush.note2') : T('rush.note'), review: false,
     onEnd: res => {
       if (state.over) return;
       if (res.win) { state.score++; UI.sfx('coin'); }
@@ -101,7 +101,13 @@ function next() {
   m.mount(screen);
   m.begin();
 }
+// Act 3: mates in two from the precomputed list (D.RUSH2), shuffled, no repeats in one round
+function nextTwo() {
+  if (!state.deck || !state.deck.length) state.deck = root.Data.RUSH2.slice().sort(() => Math.random() - 0.5);
+  return { fen: state.deck.pop(), solutions: 1 };
+}
 function start(opts) {
+  state.deck = null;
   Object.assign(state, { opts: Object.assign({ level: 0, perMate: 5, timeMs: RUSH.timeMs }, opts), score: 0, over: false, last: performance.now() });
   state.left = state.opts.timeMs;
   clearInterval(state.timer); state.timer = setInterval(tick, 100);

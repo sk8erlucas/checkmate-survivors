@@ -25,5 +25,13 @@ for (const s of D.SCENARIOS) {
     ok(st.over && st.result === 'checkmate' && plies <= 2 * s.obj.n, `${s.id}: AI converts within ${s.obj.n} moves (took ${Math.ceil(plies / 2)})`);
   }
 }
+// Act 3 Mate Rush: every mate in two is legal, has no mate in one and a forced mate in two
+const mateIn1 = pos => pos.legal().some(m => { pos.make(m); const r = pos.inCheck() && pos.legal().length === 0; pos.unmake(); return r; });
+let bad2 = 0;
+for (const fen of D.RUSH2) {
+  const pos = C.Position.fromFEN(fen);
+  if (pos.turn !== C.WHITE || pos.inCheck(C.BLACK) || pos.gameStatus().over || mateIn1(pos) || !AI.findMate(pos, 2)) { bad2++; console.log('  bad mate in two:', fen); }
+}
+ok(D.RUSH2.length >= 40 && bad2 === 0 && new Set(D.RUSH2).size === D.RUSH2.length, `${D.RUSH2.length} Mate Rush mates in two: legal, distinct, forced mate in two (no mate in one)`);
 console.log(fail ? `\n${fail} FAILURES` : '\nALL SCENARIO TESTS PASSED');
 process.exit(fail ? 1 : 0);

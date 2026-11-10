@@ -20,7 +20,7 @@ js/chess.js         rules engine: 64-square board, make/unmake, legal moves, SAN
 js/ai.js            hand-written AI: negamax + alpha-beta, quiescence, TT, personalities (style weights)
 js/sprites.js       16x16 piece masks → auto-shading → outline; FACTIONS (per-monster piece themes); icons
 js/portraits.js     32x32 monster portraits, 6 expressions (idle, blink, think, happy, hurt, ko)
-js/data.js          tunables: VERSION, potions, relics, DIFFS, INTRO, TIMECTRL, OBJ_N, ENEMIES, SCENARIOS, META
+js/data.js          tunables: VERSION, potions, relics, DIFFS, INTRO, TIMECTRL, OBJ_N, ENEMIES, SCENARIOS, RUSH2 (Act 3 mates in two), META
 js/i18n.js          all text (EN/ES)
 js/ui.js            DOM helper h(), screens, toasts, storage (meta + saved run), SFX and the music sequencer
 js/match.js         one battle: Avatar (opponent widget), board drawing + effects, clocks, objectives, potions
@@ -55,7 +55,8 @@ Packaging for itch.io: `package-itch.ps1` zips `index.html`, `css/` and `js/` in
 - **New opponent:** add it to `D.ENEMIES` (style, tier, optional `thief`/`hourglass`), give it a trait (`this.trait` hooks in `match.js`, plus `trait.<id>.name/desc` texts), add a portrait in `CHARS` (`portraits.js`), add a faction in `FACTIONS` (`sprites.js`: color, accent, `mod(m, t)`), and add `enemy.<id>.name/desc` and `say.<id>.{intro,hurt,taunt,win,lose,queen,promo,check}` in both languages. `tests/i18n.js` checks the keys.
 - **New puzzle:** add a FEN plus objective to `D.SCENARIOS` and its `scenario.<id>.name/desc` texts. `tests/scenarios.js` must still pass.
 - **New objective:** handle it in `Match.afterMove` (win/limit conditions) and `updateHud` (progress text), weight it in `OBJ_W` (`run.js`), and add `obj.<type>` plus any `reason.<x>` texts. Then add both lists to `tests/i18n.js`.
-- **Acts:** `D.ACTS` acts. Monsters carry `act` (default 1), and `genMap(act)` picks from that act's pool (Act 2 also uses Act 1's hard monsters). The boss of a non-final act leads to `showActClear` (great campfire, then descend or retire). `run.act` is missing in old saves, so treat it as 1.
+- **Acts:** `D.ACTS` acts (3: Forest, Catacombs, Castle). Monsters carry `act` (default 1), and `genMap(act)` picks from that act's pool plus the previous act's hard monsters. Bosses per act are in `BOSS`, map themes in `ACT_MUSIC` (`run.js`, played through `UI.bgm`). The boss of a non-final act leads to `showActClear` (great campfire, then go on or retire). `run.act` is missing in old saves, so treat it as 1.
+- **Player pieces are always ivory**, even when you play Black (`node.black`): draw through `Match.look(p)`, which maps your pieces to white sprites and the monster's to black/faction sprites.
 - **Map generation** runs in 4 phases (types, connections, no-repeat pass, details). Use the seedable helpers `rnd`/`chance`/`pickOne`/`weighted`/`shuffle` there, never `Math.random`, because the daily run seeds them by date.
 - **Achievements:** add to `D.ACHIEVEMENTS` plus `ach.<id>.name/desc` texts, and call `unlock('<id>')` from the moment that earns it (most checks are in `trackMatch`, `run.js`).
 - **Options** live in `meta.opts` and are applied by `applyOpts()`: `UI.reduced` (skip particles and shake) and `UI.classic` (no faction pieces). New visual effects must respect `UI.reduced`.

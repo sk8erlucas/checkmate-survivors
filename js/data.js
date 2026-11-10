@@ -7,7 +7,7 @@
 'use strict';
 const D = {};
 
-D.VERSION = '0.10.1';        // shown on the title screen (early alpha)
+D.VERSION = '0.12.0';        // shown on the title screen (early alpha)
 
 D.TYPE = { p: 1, n: 2, b: 3, r: 4, q: 5 };            // chess.js piece types
 D.MAX_ARMY = { p: 8, n: 2, b: 2, r: 2, q: 1 };         // never exceed a standard army
@@ -75,8 +75,14 @@ D.ENEMIES = [
   { id: 'golem',       style: 'positional', tier: 'normal', act: 2 },
   { id: 'gargoyle',    style: 'balanced',   tier: 'hard',   act: 2, thief: 1 },
   { id: 'necromancer', style: 'balanced',   tier: 'boss',   act: 2, thief: 2, hourglass: 1 },
+  // act 3: the Castle (act 2's hard monster, the gargoyle, guards it too)
+  { id: 'headless',   style: 'aggressive', tier: 'normal', act: 3 },
+  { id: 'succubus',   style: 'positional', tier: 'normal', act: 3 },
+  { id: 'kraken',     style: 'defensive',  tier: 'normal', act: 3 },
+  { id: 'dragon',     style: 'aggressive', tier: 'hard',   act: 3, thief: 1 },
+  { id: 'shadowking', style: 'balanced',   tier: 'boss',   act: 3, thief: 2, hourglass: 1 },
 ];
-D.ACTS = 2;
+D.ACTS = 3;
 
 // ready-made positions, all validated by tests/scenarios.js (exhaustive mate solver)
 D.SCENARIOS = [
@@ -95,6 +101,30 @@ D.SCENARIOS = [
   { id: 'deepmateq', diff: 'hard',   fen: '8/4K3/7k/8/8/5Q2/8/8 w - - 0 1',                obj: { type: 'mateIn', n: 3 },        time: 75,  style: 'balanced' },
   { id: 'deepmater', diff: 'hard',   fen: '8/R7/8/8/8/4K3/7k/8 w - - 0 1',                 obj: { type: 'mateIn', n: 3 },        time: 75,  style: 'balanced' },
   { id: 'lastwall',  diff: 'hard',   fen: '6k1/5ppp/8/4q3/8/8/5PPP/3R2K1 w - - 0 1',       obj: { type: 'survive', n: 12 },      time: 90,  style: 'aggressive' },
+];
+
+// Mate Rush in Act 3: mates in two (one key move), generated offline and checked by tests/scenarios.js
+D.RUSH2 = [
+  '8/1p6/4K1R1/8/4N3/8/5N1k/8 w - - 0 1', '8/6R1/8/3p4/5Kp1/2B1Np2/8/1k3r2 w - - 0 1', '7k/1p6/1Q6/4N3/8/5p2/8/K7 w - - 0 1',
+  '8/k7/8/8/7p/8/B1Q5/K7 w - - 0 1', 'kN6/3K4/8/6R1/8/8/7n/2B5 w - - 0 1', '8/8/1B1K4/8/k3b3/2Q5/8/8 w - - 0 1',
+  '1k6/7Q/8/8/3N4/5K2/8/8 w - - 0 1', '4R3/8/8/2Q1p3/7k/8/8/4K3 w - - 0 1', '8/k2N4/8/8/p1Q5/8/K7/8 w - - 0 1',
+  '6Q1/8/8/4N3/8/p6k/8/4K3 w - - 0 1', '8/3RQ3/6K1/8/8/5p2/8/7k w - - 0 1', 'N7/4K2k/8/8/3Q4/n4pp1/8/8 w - - 0 1',
+  '7k/8/1N6/p6K/8/8/3B4/4R3 w - - 0 1', '4k3/8/n2r1Q2/8/8/5R2/8/7K w - - 0 1', '1Q6/7p/2p3B1/8/3K4/k4p2/8/8 w - - 0 1',
+  'k7/3pR3/3R4/8/8/n7/8/7K w - - 0 1', '6k1/8/3Q4/3p4/7K/2p1B3/8/8 w - - 0 1', '7k/2K5/4R3/8/8/R1p5/8/8 w - - 0 1',
+  '8/8/1R6/4Rn2/6K1/8/8/n6k w - - 0 1', '4k3/8/1Q6/7K/8/4B3/8/8 w - - 0 1', '5R2/1k6/7R/8/8/8/8/3nK3 w - - 0 1',
+  '3k4/8/7p/5Q2/4K3/5p2/1R6/8 w - - 0 1', '8/1k4K1/7Q/8/4R3/3n4/8/8 w - - 0 1', '8/8/8/7R/6p1/k7/8/4Q1K1 w - - 0 1',
+  '8/6p1/1Qr5/1p6/4R3/3K4/7k/8 w - - 0 1', '5n2/p1p4k/2p5/8/5Q2/8/1K3B2/8 w - - 0 1', '7k/3p4/8/8/6Q1/8/8/KB6 w - - 0 1',
+  '2K5/4b3/8/6Q1/8/7k/1R6/8 w - - 0 1', 'K7/8/1R3p1k/8/8/2p3R1/8/8 w - - 0 1', '8/b6k/R1KR4/8/8/p7/8/8 w - - 0 1',
+  '8/k7/8/5B2/2Q4b/8/K7/8 w - - 0 1', '1k6/8/4Q3/1N4K1/8/1b6/8/8 w - - 0 1', '8/7r/p7/7k/1pR5/8/8/4Q1K1 w - - 0 1',
+  '8/2Q5/5n2/1p1pK2k/8/4N3/8/8 w - - 0 1', '8/b4k2/7Q/8/7K/8/r7/2R5 w - - 0 1', '3k4/5p2/8/8/8/R7/7R/5K2 w - - 0 1',
+  '7k/B7/3p4/8/6N1/3p4/K5R1/8 w - - 0 1', '8/8/7k/8/8/5R2/3K4/1Q4r1 w - - 0 1', '4Q3/1k1p4/4R3/8/3p2p1/8/8/2K5 w - - 0 1',
+  '7B/7k/3Q4/8/8/p1p5/8/5K2 w - - 0 1', '7K/1Q6/8/8/k7/1p6/1B6/8 w - - 0 1', '7K/8/1Q6/2pR4/2p4k/8/8/8 w - - 0 1',
+  '3Q4/k7/5p2/8/8/5RK1/8/8 w - - 0 1', '1k3r2/4R3/4Q3/K7/p7/8/8/8 w - - 0 1', '1k6/8/Q7/p7/8/1B4K1/8/8 w - - 0 1',
+  '8/k7/4R3/5R1p/4K3/8/8/8 w - - 0 1', '2Q5/8/8/8/B1p5/4K3/7k/8 w - - 0 1', '8/5p2/8/k3p3/8/1p6/1R3K2/5Q2 w - - 0 1',
+  '1k6/8/8/8/8/8/8/2n1RKR1 w - - 0 1', 'nkB3K1/8/2p1Q3/8/p7/8/8/8 w - - 0 1', '8/2b4k/8/1p2N3/5Q2/8/6b1/1K6 w - - 0 1',
+  'kB6/5K1p/8/4Q3/8/4p3/8/8 w - - 0 1', '5N1k/8/8/5R2/2p2B2/3pK3/8/8 w - - 0 1', '1k6/4b3/4Q3/8/8/8/B4K2/8 w - - 0 1',
+  '8/8/5R2/8/pK6/3N4/3N4/k7 w - - 0 1', '6K1/4pQ2/k7/8/8/8/8/2R5 w - - 0 1', '8/3k4/Q7/1R6/8/K7/8/8 w - - 0 1',
+  'k7/8/8/6p1/4K1Q1/n6R/8/8 w - - 0 1', '8/k7/7p/5R2/2Q4n/8/b6r/2K5 w - - 0 1', '8/k7/4R3/8/6KR/8/8/2b5 w - - 0 1',
 ];
 
 // achievements: unlocked once, each pays Crowns (local: itch.io has no achievements API for HTML games)
@@ -117,6 +147,9 @@ D.ACHIEVEMENTS = [
   { id: 'act2',        crowns: 15, shape: 'rest',    color: '#9aff7a' },
   { id: 'necromancer', crowns: 40, shape: 'elite',   color: '#9aff7a' },
   { id: 'bestiary',    crowns: 30, shape: 'eye',     color: '#7ac0f0' },
+  { id: 'black',       crowns: 10, shape: 'duel',    color: '#d8d0e8' },
+  { id: 'act3',        crowns: 20, shape: 'arena',   color: '#c89aff' },
+  { id: 'shadowking',  crowns: 60, shape: 'boss',    color: '#ffd84a' },
 ];
 
 // permanent upgrades bought with Crowns after a run ends

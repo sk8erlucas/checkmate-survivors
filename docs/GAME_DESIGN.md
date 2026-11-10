@@ -1,7 +1,7 @@
 # Checkmate Survivors — Documento de diseño
 
 > Roguelite 2D de **ajedrez real** en pixel art. HTML5 + JavaScript puro, pensado para subirse a **itch.io**.
-> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 26/10/2026 (**v0.10.1 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
+> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 10/11/2026 (**v0.12.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
 > **Publicado** en itch.io: <https://fibonaku.itch.io/checkmate-survivors>
 
 ---
@@ -220,6 +220,8 @@ Los rivales son **monstruos**. Cada uno juega con **sus propias piezas** (`FACTI
 | **The Hourglass Lich / El Liche del Reloj** | Balanced | Jefe | Roba tiempo (2) + reloj de arena | azul acero, ojos y brillo cian |
 | The Shade / La Sombra (puzzles) | — | — | | gris violáceo |
 
+Los monstruos de los Actos 2 y 3 están en la sección 14. **Tus piezas son siempre de marfil**, también cuando jugás con negras (sección 19): el color de dibujo depende de quién es la pieza, no del bando.
+
 ### Retratos y reacciones de los rivales
 Cada rival tiene un **retrato pixel art animado** (`js/portraits.js`, 32×32 generado por código) junto al tablero:
 - **Idle según estilo**: Rookie se inquieta, Greedy se balancea, Defensive respira lento, Aggressive rebota, Positional/Balanced se mecen; el jefe flota con un aura violeta. Parpadea cada pocos segundos.
@@ -330,7 +332,7 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 
 ## 11. Estado (v0.10.1 · Early Alpha) y hoja de ruta
 
-**Hecho:** motor completo, IA con 6 estilos, mapa ramificado, 4 tipos de objetivo, relojes, 6 pociones, 7 reliquias, 5 eventos, tienda, fogata, jefe, 10 puzzles, tienda permanente, guardado, EN/ES, sonido.
+**Hecho (resumen a v0.12):** motor completo, IA con 6 estilos, **3 actos** con 20 monstruos y 3 jefes, mapa ramificado con 9 tipos de nodo, 6 tipos de objetivo, relojes, 6 pociones, 7 amuletos, 8 eventos (3 con monstruos), 15 puzzles, Mate Rush (mates en 1 y en 2), Arena, Élite, tienda permanente con amuletos de colección, 21 logros, run del día, bestiario, repaso de partida, duelos con negras, guardado, EN/ES, sonido y música sintetizados con volumen.
 **v0.2:** retratos animados de rivales con barra de vida, daño, reacciones y frases; nueva dama; tarjetas rediseñadas; guardar/continuar run.
 **v0.3.0:** rivales monstruo con piezas temáticas por facción; inicio de calentamiento con objetivos *coronar* y *capturar N*; mapa rediseñado; panel "tu lado del tablero"; música y sonidos de golpe/muerte; animaciones de captura, jaque, enroque, coronación y mate; frases para dama perdida, coronación y jaque; versión en el menú.
 **v0.4.0:** dificultad bastante más baja (IA menos profunda, ejércitos enemigos más chicos, más tiempo, 5 peones y 1 Reintento al empezar, calentamiento de 3 pasos); tienda permanente más barata y más Coronas por run; siluetas de piezas rediseñadas; pantalla "clic para empezar" para que suene la música del menú; kit de itch.io (`marketing/`); `AGENTS.md`.
@@ -341,20 +343,26 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 **v0.9.0:** **16 logros** (pagan Coronas); **Run del día** con mapa fijo por fecha; nodo **Élite**; pantalla de **Opciones** (sonido, música, menos animaciones, piezas enemigas clásicas); el mapa ya no repite nodos no combativos ni monstruos en caminos conectados.
 **v0.10.0:** **Acto 2, Las Catacumbas** (sección 14): 4 monstruos nuevos y el jefe **Nigromante**, gran fogata entre actos y la opción de retirarse victorioso o seguir.
 **v0.10.1:** 3 eventos con monstruos (caldero de Hexa, espejo embrujado, gólem dormido).
+**v0.11.0:** **repaso después de cada batalla** (encuentra tu peor jugada y te muestra una mejor en el tablero), **duelos con negras** de vez en cuando (+15% monedas), **bestiario** con tu récord contra cada monstruo y **volumen** con deslizadores (sección 19).
+**v0.12.0:** **Acto 3, El Castillo** (sección 14): 4 monstruos nuevos y el jefe final **Rey Sombra**, Mate Rush con **mates en 2**, música propia para las Catacumbas y el Castillo, 3 logros nuevos.
 
 **Pendiente / ideas (por prioridad):**
-1. **Acto 3, El Castillo** (sección 14): gárgola ya existe; faltan dragón joven, caballero sin cabeza, súcubo, kraken y el jefe Rey Sombra. Además, tema musical propio por acto y Mate Rush de mates en 2.
-2. **Pieza "estrella" por monstruo** con efecto visual (la dama araña deja telaraña) y tema musical por monstruo.
-3. Más eventos con monstruos (hay 3) y más puzzles (mate en 3–4, finales de peones, tácticas).
-4. **Escenario vertical 720×1280 para celular** (sección 18) y controles táctiles.
-5. **Volumen** con deslizadores (hoy hay interruptores de sonido y música).
-6. Mejoras de IA: libro de aperturas corto, mejor manejo de finales de peones.
-7. Revisar `meta.stats.history` después de varias runs del autor para afinar el balance (sección 12).
+1. **Piezas veteranas**: una pieza que sobrevive varias batallas recibe un nombre y una medalla ("Peón Bruno, 5 batallas"). No cambia cómo se mueve; si la perdés, aparece un cartel de despedida. Necesita que el ejército guarde piezas individuales en vez de solo cantidades (con compatibilidad para runs guardadas viejas).
+2. **Resumen al terminar la run**: la mejor victoria, el mate más rápido, la pieza más valiosa y el monstruo que te venció. Sirve también para compartir en itch.io.
+3. **Niveles de desafío después de ganar** (tipo "Ascensión"): opcionales, se desbloquean al vencer al Rey Sombra. Cada nivel suma una dificultad (menos tiempo, rivales con más piezas, tienda más cara) a cambio de más Coronas. El comienzo de la run sin desafío no cambia.
+4. **Pieza "estrella" por monstruo** con efecto visual (la dama araña deja telaraña) y tema musical por monstruo.
+5. Más eventos con monstruos (hay 3, ninguno del Castillo todavía) y más puzzles (mate en 3–4, finales de peones, tácticas).
+6. **Escenario vertical 720×1280 para celular** (sección 18) y controles táctiles.
+7. Mejoras de IA: libro de aperturas corto, mejor manejo de finales de peones.
+8. Revisar `meta.stats.history` después de varias runs del autor para afinar el balance (sección 12), sobre todo el Acto 3, que todavía no se probó con `tests/balance.js`.
+
+**Decisiones del autor (10/11/2026)**
+- **Tres actos** en total: Bosque, Catacumbas y Castillo. El Rey Sombra es el jefe final.
+- **Jugar con negras de vez en cuando**: implementado como una variante de duelo (sección 19).
 
 **Preguntas abiertas para el autor**
 - ¿El triple empate/50 jugadas debe contar como derrota o dar un premio de consuelo?
-- ¿Querés que el jugador pueda jugar con negras en algunos duelos?
-- ¿Cuántos actos y qué duración objetivo de run (hoy ~25–30 min)?
+- ¿Qué duración objetivo tiene una run completa de tres actos (hoy cada acto dura ~25–30 min)?
 - ¿Monetización/estilo de publicación (gratis con donaciones en itch.io, premium)?
 
 ---
@@ -392,6 +400,13 @@ Cada monstruo suma **un rasgo** que no cambia las reglas del ajedrez. Actúa sob
 | Medusa | *Mirada pétrea* | En su 6ª jugada, tu reloj corre al doble durante tu siguiente jugada. |
 | Conde Vlastor | *Drenaje* | Cada vez que te come una pieza te drena 2 s para él (Iron Clock lo bloquea). |
 | El Liche del Reloj | *Segunda fase* | Al perder la dama: aura roja, música más rápida y te roba 8 s (Iron Clock lo bloquea). |
+| Sir Nadie (Acto 3) | *Caballería* | Solo caballos, torres y peones: sus alfiles se vuelven caballos y su dama, una torre (nunca pasa del ejército estándar). Nunca te toca "comer la dama" contra él. |
+| Velvet la Súcubo (Acto 3) | *Beso robado* | Cuando te come una pieza que no sea peón, te roba una poción al azar de la bolsa (se pierde también para la run). |
+| Krakk el Kraken del Foso (Acto 3) | *Ocho brazos* | +2 s de incremento por jugada para él. |
+| Ember el Dragón Joven (Acto 3) | *Aliento de fuego* | Cada 5 jugadas suyas te quema 4 s, con llamas sobre tu rey. |
+| El Rey Sombra (jefe del Acto 3) | *Eclipse* | Siempre tiene dama. Con menos de la mitad de vida: aura roja, música más rápida y te roba 10 s (Iron Clock lo bloquea). |
+
+Los rasgos del Acto 2 están en la tabla de la sección 14.
 
 El rasgo se ve en el detalle del nodo, debajo del nombre del rival (★) y en la tarjeta de presentación de la batalla. Se implementan en `match.js` (`this.trait`), salvo el del esqueleto (`startDuel` en `run.js`) y el robo de monedas, que la run aplica con `cfg.onSteal`.
 
@@ -422,8 +437,27 @@ Al vencer al Liche aparece una pantalla especial:
 - **Logros nuevos**: *Hacia la oscuridad* (bajar al Acto 2, 15 Coronas) y *Saqueatumbas* (vencer al Nigromante, 40). *Cazamonstruos* pasa a requerir también a los del Acto 2.
 - La **Run del día** usa semilla solo para el mapa del Acto 1; el del Acto 2 es aleatorio.
 
-### Acto 3: El Castillo (propuesta)
-Dragón joven, caballero sin cabeza (solo caballos y torres: composición temática), súcubo y kraken del foso. Jefe final: **el Rey Sombra**, que empieza con el ejército completo; vos llegás con lo que juntaste. En el Acto 3 el Mate Rush pasa a mates en 2.
+### Entre el Acto 2 y el 3
+Al vencer al Nigromante vuelve la gran fogata (+1 Reintento y 1 de 3 amuletos) con la opción de **subir al Castillo** o retirarte victorioso. Es la misma pantalla, generalizada para cualquier acto que no sea el último.
+
+### Acto 3: El Castillo (implementado en v0.12)
+- **El acto final** (`D.ACTS = 3`). Mapa propio con fondo de losas violetas y título "Acto 3: El Castillo". Sin duelos fáciles: normal / difícil 70/30, 60/40, 55/45, 50/50, 45/55 y 40/60.
+- **Paga ×2** en monedas (`actMult` = 1 + 0,5 por acto después del primero). El bonus de Coronas por terminar es 40 × acto (120 si vencés al Rey Sombra).
+- **Monstruos** (`act: 3`). La gárgola, difícil del Acto 2, también aparece (regla general: los difíciles del acto anterior te siguen):
+
+| Monstruo | Estilo | Tier | Rasgo | Sus piezas |
+|---|---|---|---|---|
+| Sir Nadie, el Caballero sin Cabeza | Aggressive | Normal | *Caballería* (solo caballos y torres) | acero, sin ojos: una llama violeta arriba |
+| Velvet la Súcubo | Positional | Normal | *Beso robado* (te roba pociones) | magenta con cuernitos y alas |
+| Krakk el Kraken del Foso | Defensive | Normal | *Ocho brazos* (+2 s de incremento) | verde mar con tentáculos en la base |
+| Ember el Dragón Joven | Aggressive | Difícil (roba tiempo) | *Aliento de fuego* (−4 s cada 5 jugadas) | rojo fuego con cuernos y escamas |
+| **El Rey Sombra** (jefe final) | Balanced | Jefe (roba tiempo ×2 + reloj de arena) | *Eclipse* (siempre con dama; segunda fase con robo de 10 s) | violeta noche con brillo violeta y base dorada |
+
+- **Decisión de balance:** la propuesta decía que el Rey Sombra empezaba con el ejército completo. Se descartó porque contradice el pedido de que el juego sea más amable: usa el presupuesto de jefe normal (1,1 × tu ejército + 2), pero siempre con dama.
+- **Mate Rush con mates en 2**: en el Acto 3 el nodo dura 90 s y paga el doble por mate. Los 60 mates en 2 (una sola jugada clave, el defensor siempre tiene opciones) se generaron fuera del juego y están en `D.RUSH2`; `tests/scenarios.js` comprueba que cada uno sea legal y tenga mate forzado en 2 sin mate en 1. Después de tu jugada clave responde el rival y tenés que dar mate.
+- **Música por acto**: el mapa y las pantallas entre batallas tocan el tema del acto (Bosque: el del menú; Catacumbas: `crypt`, re menor lento; Castillo: `castle`, mi menor con aire de marcha). Las batallas siguen eligiendo por reloj.
+- **Logros**: *Las puertas del castillo* (llegar al Acto 3, 20 Coronas) y *Regicidio* (vencer al Rey Sombra, 60).
+- **Final**: vencer al Rey Sombra termina la run con la pantalla "EL CASTILLO ES TUYO".
 
 ## 15. Run del día, logros y estadísticas (implementado en v0.9)
 ### Run del día
@@ -454,21 +488,24 @@ itch.io **no tiene sistema de logros** para juegos HTML (su API solo cubre compr
 | Cazamonstruos | Vencer a cada monstruo al menos una vez (incluye el Acto 2) | 30 |
 | Hacia la oscuridad | Bajar al Acto 2 | 15 |
 | Saqueatumbas | Vencer al Nigromante | 40 |
+| El lado oscuro | Ganar una batalla jugando con negras | 10 |
+| Las puertas del castillo | Llegar al Acto 3 | 20 |
+| Regicidio | Vencer al Rey Sombra | 60 |
 
-Con los dos del Acto 2 (sección 14) son 18 y suman 280 Coronas. Los contadores entre runs (puzzles, damas, monstruos vencidos) están en `meta.counts`.
+Son 21 logros y suman 370 Coronas. *Cazamonstruos* incluye a todos los monstruos de los tres actos. Los contadores entre runs (puzzles, damas, monstruos vencidos) están en `meta.counts`.
 
 ### Estadísticas
 `meta.stats.history` (últimas 30 runs: paso, nodos, victorias, quién te venció) y la última run en el menú (sección 12).
 
 ## 16. Opciones y accesibilidad (implementado en v0.9)
 Botón **Opciones** en el menú (modal):
-- **Efectos de sonido** y **Música**: interruptores.
+- **Efectos de sonido** y **Música**: deslizadores de volumen de 0 a 100% (desde v0.11; antes eran interruptores). En 0 quedan en silencio. Cada uno tiene su propio bus de ganancia en `ui.js`, y se guardan en `meta.opts.sfxVol` / `musVol`. El botón *Sonido* de la batalla sigue siendo un silencio rápido.
 - **Menos animaciones**: sin temblor de tablero, destellos ni partículas, y sin animaciones de reposo de retratos, medallas y fichas (`body.reduced` + `UI.reduced`).
 - **Piezas enemigas clásicas**: el set carmesí en lugar de las facciones de cada monstruo. El rasgo y el retrato del monstruo se mantienen (`UI.classic`).
 - **Pantalla completa.**
 - Se guarda en `meta.opts`.
 
-Pendiente: volumen con deslizadores, coordenadas siempre visibles, flecha de última jugada y el escenario vertical para celular (sección 18).
+Ya estaban hechas y quedan anotadas: las coordenadas se ven siempre en el borde del tablero, la última jugada se marca en dorado y la lista de jugadas está en el panel izquierdo. Pendiente: el escenario vertical para celular (sección 18).
 
 ## 17. Todo dentro de la run (decisión del autor, v0.7)
 **No hay modos de juego aparte**: cada idea nueva entra como **parte del juego principal**, sobre todo como un tipo de nodo del mapa, para que alimente la misma run (monedas, piezas, amuletos).
@@ -490,7 +527,7 @@ Pendiente: volumen con deslizadores, coordenadas siempre visibles, flecha de úl
 |---|---|
 | Boss Rush | **Nodo "Desafío de jefe"** (élite) en el paso 5: un mini-jefe con su rasgo y un premio de amuleto garantizado. Opcional, riesgoso. |
 | Supervivencia | **Nodo "Arena" (implementado en v0.8)**: ver abajo. |
-| Mate Rush en 2 | En el **Acto 2** el nodo Mate Rush pasa a mates en 2 (generación precalculada para que no se trabe). |
+| Mate Rush en 2 | **Implementado en v0.12**: en el **Acto 3** el nodo Mate Rush pasa a mates en 2 (precalculados en `D.RUSH2`, sección 14). |
 | Desafío diario | **Run del día**: la misma run (mapa, monstruos y premios) con semilla fija por fecha. Se elige desde el botón de empezar run, no es un modo nuevo. |
 
 ### Arena: nodo de riesgo (implementado en v0.8)
@@ -514,3 +551,22 @@ Pendiente: volumen con deslizadores, coordenadas siempre visibles, flecha de úl
 
 **Configuración en itch.io:** *Viewport dimensions* **1280 × 720**, activar *Fullscreen button* y *Automatically start on page load*.
 
+## 19. Repaso, negras y bestiario (implementado en v0.11)
+### Repaso después de la batalla
+- Al terminar una batalla (ganada o perdida, con al menos 2 jugadas tuyas) la tarjeta de resultado ofrece **Repasar la partida**.
+- El juego repite la partida y analiza **cada jugada tuya** con la IA (profundidad 3, 60 ms por búsqueda), en pedazos chicos para no trabar la página, con un contador "Analizando tus jugadas... 5 / 12".
+- Muestra **la jugada que más te costó** (si perdiste al menos 1,5 peones de ventaja): el tablero vuelve a esa posición con una **flecha roja** (lo que jugaste) y una **dorada** (la mejor), y dice cuánto valía ("unos 3,0 peones más" o "llevaba a un mate forzado"). Si no hubo errores graves, felicita.
+- *Volver* regresa a la tarjeta de resultado. No hay repaso en el Mate Rush.
+- Enseña ajedrez sin hacer el juego más difícil, pensado para quien no juega seguido.
+
+### Jugar con negras de vez en cuando
+- Desde el paso 3, cada duelo que no sea de calentamiento tiene un **20%** de jugarse con negras (también los nodos Élite). Los jefes, la Arena y los puzzles siguen como antes.
+- El nodo muestra la etiqueta **NEGRAS** en el mapa, y el detalle dice "Tus piezas: Negras (abre el monstruo, +15% monedas)".
+- Tu ejército se ubica en las filas 7 y 8, el tablero se da vuelta (seguís jugando "desde abajo") y **el monstruo mueve primero**. Las reglas no cambian.
+- Paga **+15% de monedas** para compensar la desventaja de no empezar. Logro: *El lado oscuro*.
+- La decisión es parte del mapa (`node.black`), así que la run del día también la fija por fecha.
+
+### Bestiario
+- Botón **Bestiario (x/20)** en el menú. Muestra a todos los monstruos agrupados por acto.
+- Los que ya enfrentaste aparecen con su retrato, tier, estilo, rasgo y **tu récord** (ganadas / perdidas). Los demás son una silueta negra con "???".
+- El récord se guarda en `meta.counts.record` (`{ id: [ganadas, perdidas] }`); las partidas viejas sin ese campo cuentan como conocidos a los monstruos que ya venciste (`meta.counts.beaten`).
