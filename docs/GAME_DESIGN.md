@@ -1,7 +1,7 @@
 # Checkmate Survivors — Documento de diseño
 
 > Roguelite 2D de **ajedrez real** en pixel art. HTML5 + JavaScript puro, pensado para subirse a **itch.io**.
-> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 10/11/2026 (**v0.12.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
+> Idioma por defecto: **inglés** (selector de **español** en el menú). Última actualización: 17/11/2026 (**v0.14.0 · Early Alpha**, se muestra en el menú principal; la constante es `D.VERSION` en `data.js`).
 > **Publicado** en itch.io: <https://fibonaku.itch.io/checkmate-survivors>
 
 ---
@@ -99,7 +99,17 @@ Composición: ~45% del presupuesto en peones y el resto en piezas al azar (nunca
 | Fácil | 1 | 50% | 0.50 × tu ejército | 1.0 | verde |
 | Normal | 2 | 30% | 0.70 × tu ejército | 1.5 | amarillo |
 | Difícil | 3 | 15% | 0.90 × + 1 | 2.2 | rojo |
-| Jefe | 4 | 3% | 1.10 × + 2 | 4.0 | violeta |
+| Jefe | 3 | 15% / 10% / 5% | según el acto (abajo) | 4.0 | violeta |
+
+**Jefes por acto (v0.13, `D.BOSS_ACT`):** el autor encontró al Liche "muy difícil aun con todas las piezas". La simulación lo confirmó: con profundidad 4 y 1,1 × + 2 el jugador proxy (profundidad 2) perdía 6 de 6 incluso con el ejército completo. Ahora los tres jefes usan profundidad 3 y suben por acto:
+
+| Jefe | Errores | Presupuesto | Reloj |
+|---|---|---|---|
+| Liche (Acto 1) | 15% | 0.80 × | rápido (2:30 +3) |
+| Nigromante (Acto 2) | 10% | 0.90 × | rápido |
+| Rey Sombra (Acto 3) | 5% | 1.00 × + 1 | blitz |
+
+Con esos valores el proxy le gana al Liche 14 de 18 partidas (ejércitos de 17, 27 y 39 puntos). El Liche además roba tiempo 1 vez en lugar de 2.
 
 \* "Errores": probabilidad de que el rival elija una jugada plausible pero no la mejor (nunca una que permita mate en 1).
 En finales con pocas piezas (≤8) la IA busca 1 nivel más profundo, y con ≤4 piezas 2 niveles más (solo rivales de profundidad ≥3).
@@ -134,23 +144,37 @@ El jugador recibe bonos (Banco de tiempo +5 s por nivel, Reloj de bolsillo +10 s
 | Poción | Efecto | Precio |
 |---|---|---|
 | Rewind (Deshacer) | Deshace tu última jugada y la respuesta del rival | 30 |
-| Oracle Eye (Pista) | Muestra una buena jugada (flecha dorada). Tu reloj se pausa mientras "piensa" | 25 |
+| Oracle Eye (Pista) | Pista completa: flecha dorada, casillas de origen y destino marcadas y un cartel con la jugada ("Caballo a f3 (Cf3)"). Tu reloj se pausa mientras "piensa" | 25 |
 | Watchtower (Atalaya) | Marca tus piezas atacadas (rojo) y las enemigas que atacás (verde) | 20 |
 | Hourglass | +15 s en tu reloj | 20 |
 | Time Thief | Robás 10 s al rival | 35 |
 | Frozen Time | El reloj rival no corre durante su próxima jugada | 30 |
+| Foresight (Premonición, v0.14) | Muestra con una flecha roja qué jugaría el monstruo si fuera su turno (su amenaza). No se puede usar en jaque | 20 |
+| Haste Elixir (Elixir veloz, v0.14) | +3 s de incremento por jugada el resto de la batalla | 25 |
+| Gold Potion (Poción de oro, v0.14) | Si ganás la batalla, ×1,5 monedas (una por batalla) | 25 |
+| Banishment (Destierro, v0.14) | Elegís un peón enemigo y desaparece. Solo peones, y nunca uno que deje al rey rival en jaque. No es una jugada (sigue siendo tu turno); el Deshacer no puede volver antes de él | 60 |
 
-Los espacios de poción son limitados (3 base). Si la bolsa está llena, la poción se vende por la mitad de su precio.
+El autor pidió "una poción que mate una pieza enemiga, pero no tanto": el Destierro se limita a peones, es la poción más cara y la más rara (peso 1). Las reglas del ajedrez no cambian: es como dar ventaja de un peón, algo que existe en el ajedrez real.
+
+Los espacios de poción son limitados (3 base). **Las pociones iguales se apilan en un mismo espacio sin límite práctico** (`D.STACK = 99`, v0.14; en v0.13 el tope era 3–5). El autor quiere que una run con mucha plata se vuelva muy fácil, por eso en la tienda **las pociones no se agotan**: se pueden comprar las veces que quieras. Cada pila muestra abajo a la derecha cuántas quedan (en el encabezado, en "tu lado del tablero" y en la batalla). Si no entra en ninguna pila ni en un espacio libre, la poción se vende por la mitad de su precio. `run.potions` sigue siendo una lista plana de ids, así que las runs guardadas viejas cargan igual. El maleficio de Hexa bloquea **una** copia: con una pila podés tomar las demás.
 
 ### Amuletos (pasivos durante toda la run, 70 monedas en tienda)
 En el juego se llaman **amuletos** (en el código siguen siendo `relic`/`RELICS`).
 Pocket Watch (+10 s por batalla) · Lucky Coin (+25% monedas) · Deep Pockets (+1 espacio de poción) · Veteran Eye (1 pista gratis por batalla) · Tempo Charm (+1 s de incremento) · Iron Clock (inmune al robo de tiempo) · Phoenix Feather (+1 Reintento).
+**Nuevos en v0.14:** Merchant's Ring / Anillo del mercader (precios de la tienda −20%) · Alchemist's Flask / Frasco del alquimista (35% de chance de una poción al azar después de cada batalla ganada) · Hunter Fang / Colmillo de cazador (+2 s cada vez que capturás) · Watch Lantern / Farol del vigía (la Atalaya queda siempre encendida). Los cuatro también están en la tienda permanente (70 / 100 / 80 / 110 Coronas).
+
+### Piezas veteranas (v0.14)
+- Cada pieza del ejército tiene **nombre** ("Peón Bruno", "Kiki the Knight"). `run.roster` guarda `{ name, b }` por pieza, en el mismo orden que `run.army` y que las casillas de salida (`armySlots`). Las runs viejas reciben un plantel nuevo al cargarse.
+- Una pieza que **sobrevive a una batalla ganada** (duelo, élite o jefe) suma una batalla. Match sigue a cada pieza casilla por casilla (`cfg.ids`, también con enroque, coronación y Deshacer).
+- **Medallas**: bronce a las 3 batallas, plata a las 6, oro a las 10 (punto de color en la esquina de la casilla, en el tablero y en "tu lado del tablero"). Cada medalla paga **1/2/3 monedas** por batalla ganada en la que esa pieza sobrevive.
+- No cambia cómo se mueve ninguna pieza. Si cae una pieza con medalla aparece "¡Cayó Peón Bruno!" (vuelve en la próxima batalla, pero esa no le cuenta). Si deja el ejército para siempre (eventos), se va la menos veterana y, si tenía medalla, aparece un cartel de despedida.
+- Pasando el mouse por una pieza propia en la batalla se ve su nombre y sus batallas. El resumen de la run muestra al **veterano estrella**.
 
 ### Piezas (tienda)
 Peón 20 · Caballo 45 · Alfil 45 · Torre 70 · Dama 130 (máximos: 8 / 2 / 2 / 2 / 1).
 
 ### Rival con objetos
-Algunos rivales pueden **robarte 8 s** (Colmillo el Lobizón, Conde Vlastor: 1 uso; el Liche del Reloj: 2 usos y un reloj de arena). Se avisa con un cartel y el amuleto *Iron Clock* te protege (también del drenaje del vampiro y de la fase 2 del Liche).
+Algunos rivales pueden **robarte 8 s** (Colmillo el Lobizón, Conde Vlastor y el Liche del Reloj: 1 uso, y el Liche además un reloj de arena). Se avisa con un cartel y el amuleto *Iron Clock* te protege (también del drenaje del vampiro y de la fase 2 del Liche).
 
 ---
 
@@ -217,7 +241,7 @@ Los rivales son **monstruos**. Cada uno juega con **sus propias piezas** (`FACTI
 | Fang the Werewolf / Colmillo el Lobizón | Aggressive | Difícil | Roba tiempo (1) | marrón con orejas y pelaje |
 | Medusa | Positional | Difícil | | verde agua con serpientes |
 | Count Vlastor / Conde Vlastor | Balanced | Difícil | Roba tiempo (1) | bordó con alas de murciélago |
-| **The Hourglass Lich / El Liche del Reloj** | Balanced | Jefe | Roba tiempo (2) + reloj de arena | azul acero, ojos y brillo cian |
+| **The Hourglass Lich / El Liche del Reloj** | Balanced | Jefe | Roba tiempo (1) + reloj de arena | azul acero, ojos y brillo cian |
 | The Shade / La Sombra (puzzles) | — | — | | gris violáceo |
 
 Los monstruos de los Actos 2 y 3 están en la sección 14. **Tus piezas son siempre de marfil**, también cuando jugás con negras (sección 19): el color de dibujo depende de quién es la pieza, no del bando.
@@ -332,7 +356,7 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 
 ## 11. Estado (v0.10.1 · Early Alpha) y hoja de ruta
 
-**Hecho (resumen a v0.12):** motor completo, IA con 6 estilos, **3 actos** con 20 monstruos y 3 jefes, mapa ramificado con 9 tipos de nodo, 6 tipos de objetivo, relojes, 6 pociones, 7 amuletos, 8 eventos (3 con monstruos), 15 puzzles, Mate Rush (mates en 1 y en 2), Arena, Élite, tienda permanente con amuletos de colección, 21 logros, run del día, bestiario, repaso de partida, duelos con negras, guardado, EN/ES, sonido y música sintetizados con volumen.
+**Hecho (resumen a v0.12):** motor completo, IA con 6 estilos, **3 actos** con 20 monstruos y 3 jefes, mapa ramificado con 9 tipos de nodo, 6 tipos de objetivo, relojes, 10 pociones, 11 amuletos, piezas veteranas, 8 eventos (3 con monstruos), 15 puzzles, Mate Rush (mates en 1 y en 2), Arena, Élite, tienda permanente con amuletos de colección, 21 logros, run del día, bestiario, repaso de partida, duelos con negras, guardado, EN/ES, sonido y música sintetizados con volumen.
 **v0.2:** retratos animados de rivales con barra de vida, daño, reacciones y frases; nueva dama; tarjetas rediseñadas; guardar/continuar run.
 **v0.3.0:** rivales monstruo con piezas temáticas por facción; inicio de calentamiento con objetivos *coronar* y *capturar N*; mapa rediseñado; panel "tu lado del tablero"; música y sonidos de golpe/muerte; animaciones de captura, jaque, enroque, coronación y mate; frases para dama perdida, coronación y jaque; versión en el menú.
 **v0.4.0:** dificultad bastante más baja (IA menos profunda, ejércitos enemigos más chicos, más tiempo, 5 peones y 1 Reintento al empezar, calentamiento de 3 pasos); tienda permanente más barata y más Coronas por run; siluetas de piezas rediseñadas; pantalla "clic para empezar" para que suene la música del menú; kit de itch.io (`marketing/`); `AGENTS.md`.
@@ -344,17 +368,17 @@ Para regenerar las capturas: abrir copias guionadas de `index.html` en Edge head
 **v0.10.0:** **Acto 2, Las Catacumbas** (sección 14): 4 monstruos nuevos y el jefe **Nigromante**, gran fogata entre actos y la opción de retirarse victorioso o seguir.
 **v0.10.1:** 3 eventos con monstruos (caldero de Hexa, espejo embrujado, gólem dormido).
 **v0.11.0:** **repaso después de cada batalla** (encuentra tu peor jugada y te muestra una mejor en el tablero), **duelos con negras** de vez en cuando (+15% monedas), **bestiario** con tu récord contra cada monstruo y **volumen** con deslizadores (sección 19).
+**v0.14.0:** **piezas veteranas** con nombre y medallas que pagan monedas, **4 pociones nuevas** (Premonición, Elixir veloz, Poción de oro y Destierro), **4 amuletos nuevos** (Anillo del mercader, Frasco del alquimista, Colmillo de cazador y Farol del vigía), pociones apilables **sin límite** y que no se agotan en la tienda, y el **Ojo del oráculo da la jugada completa**.
+**v0.13.0:** **jefes más amables según el acto** (sección 4: el Liche baja mucho), **pociones apilables** con contador (sección 5) y **resumen al terminar la run** (mejor victoria, mate más rápido, pieza más valiosa, pociones tomadas y quién te venció).
 **v0.12.0:** **Acto 3, El Castillo** (sección 14): 4 monstruos nuevos y el jefe final **Rey Sombra**, Mate Rush con **mates en 2**, música propia para las Catacumbas y el Castillo, 3 logros nuevos.
 
 **Pendiente / ideas (por prioridad):**
-1. **Piezas veteranas**: una pieza que sobrevive varias batallas recibe un nombre y una medalla ("Peón Bruno, 5 batallas"). No cambia cómo se mueve; si la perdés, aparece un cartel de despedida. Necesita que el ejército guarde piezas individuales en vez de solo cantidades (con compatibilidad para runs guardadas viejas).
-2. **Resumen al terminar la run**: la mejor victoria, el mate más rápido, la pieza más valiosa y el monstruo que te venció. Sirve también para compartir en itch.io.
-3. **Niveles de desafío después de ganar** (tipo "Ascensión"): opcionales, se desbloquean al vencer al Rey Sombra. Cada nivel suma una dificultad (menos tiempo, rivales con más piezas, tienda más cara) a cambio de más Coronas. El comienzo de la run sin desafío no cambia.
-4. **Pieza "estrella" por monstruo** con efecto visual (la dama araña deja telaraña) y tema musical por monstruo.
-5. Más eventos con monstruos (hay 3, ninguno del Castillo todavía) y más puzzles (mate en 3–4, finales de peones, tácticas).
-6. **Escenario vertical 720×1280 para celular** (sección 18) y controles táctiles.
-7. Mejoras de IA: libro de aperturas corto, mejor manejo de finales de peones.
-8. Revisar `meta.stats.history` después de varias runs del autor para afinar el balance (sección 12), sobre todo el Acto 3, que todavía no se probó con `tests/balance.js`.
+1. **Niveles de desafío después de ganar** (tipo "Ascensión"): opcionales, se desbloquean al vencer al Rey Sombra. Cada nivel suma una dificultad (menos tiempo, rivales con más piezas, tienda más cara) a cambio de más Coronas. El comienzo de la run sin desafío no cambia.
+2. **Pieza "estrella" por monstruo** con efecto visual (la dama araña deja telaraña) y tema musical por monstruo.
+3. Más eventos con monstruos (hay 3, ninguno del Castillo todavía) y más puzzles (mate en 3–4, finales de peones, tácticas).
+4. **Escenario vertical 720×1280 para celular** (sección 18) y controles táctiles.
+5. Mejoras de IA: libro de aperturas corto, mejor manejo de finales de peones.
+6. Revisar `meta.stats.history` después de varias runs del autor para afinar el balance (sección 12), sobre todo el Acto 3, que todavía no se probó con `tests/balance.js`.
 
 **Decisiones del autor (10/11/2026)**
 - **Tres actos** en total: Bosque, Catacumbas y Castillo. El Rey Sombra es el jefe final.
@@ -453,7 +477,7 @@ Al vencer al Nigromante vuelve la gran fogata (+1 Reintento y 1 de 3 amuletos) c
 | Ember el Dragón Joven | Aggressive | Difícil (roba tiempo) | *Aliento de fuego* (−4 s cada 5 jugadas) | rojo fuego con cuernos y escamas |
 | **El Rey Sombra** (jefe final) | Balanced | Jefe (roba tiempo ×2 + reloj de arena) | *Eclipse* (siempre con dama; segunda fase con robo de 10 s) | violeta noche con brillo violeta y base dorada |
 
-- **Decisión de balance:** la propuesta decía que el Rey Sombra empezaba con el ejército completo. Se descartó porque contradice el pedido de que el juego sea más amable: usa el presupuesto de jefe normal (1,1 × tu ejército + 2), pero siempre con dama.
+- **Decisión de balance:** la propuesta decía que el Rey Sombra empezaba con el ejército completo. Se descartó porque contradice el pedido de que el juego sea más amable: usa el presupuesto de jefe del Acto 3 (1,0 × tu ejército + 1 desde v0.13), pero siempre con dama.
 - **Mate Rush con mates en 2**: en el Acto 3 el nodo dura 90 s y paga el doble por mate. Los 60 mates en 2 (una sola jugada clave, el defensor siempre tiene opciones) se generaron fuera del juego y están en `D.RUSH2`; `tests/scenarios.js` comprueba que cada uno sea legal y tenga mate forzado en 2 sin mate en 1. Después de tu jugada clave responde el rival y tenés que dar mate.
 - **Música por acto**: el mapa y las pantallas entre batallas tocan el tema del acto (Bosque: el del menú; Catacumbas: `crypt`, re menor lento; Castillo: `castle`, mi menor con aire de marcha). Las batallas siguen eligiendo por reloj.
 - **Logros**: *Las puertas del castillo* (llegar al Acto 3, 20 Coronas) y *Regicidio* (vencer al Rey Sombra, 60).

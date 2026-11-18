@@ -67,11 +67,16 @@ function cavalry(a) {
 }
 const PAWN_FILES = [3, 4, 2, 5, 1, 6, 0, 7];            // d e c f b g a h
 const HOME = { n: [6, 1], b: [5, 2], r: [7, 0], q: [3] };
+// where each piece of an army starts: piece i of kind k (the veteran roster uses the same order)
+function armySlots(army, color) {
+  const base = color === 0 ? 0 : 56, pr = color === 0 ? 8 : 48, out = [];
+  for (let i = 0; i < army.p; i++) out.push({ sq: pr + PAWN_FILES[i], k: 'p', i });
+  for (const k of ['n', 'b', 'r', 'q']) for (let i = 0; i < army[k]; i++) out.push({ sq: base + HOME[k][i], k, i });
+  return out;
+}
 function placeArmy(board, army, color) {
-  const base = color === 0 ? 0 : 56, pr = color === 0 ? 8 : 48;
-  board[base + 4] = C.mk(C.KING, color);
-  for (let i = 0; i < army.p; i++) board[pr + PAWN_FILES[i]] = C.mk(C.PAWN, color);
-  for (const k of ['n', 'b', 'r', 'q']) for (let i = 0; i < army[k]; i++) board[base + HOME[k][i]] = C.mk(D.TYPE[k], color);
+  board[(color === 0 ? 0 : 56) + 4] = C.mk(C.KING, color);
+  for (const s of armySlots(army, color)) board[s.sq] = C.mk(D.TYPE[s.k], color);
 }
 function setupFEN(pa, ea, black) {   // black: the player takes the black side (the monster moves first)
   const b = new Array(64).fill(0);
@@ -94,6 +99,14 @@ function setupFEN(pa, ea, black) {   // black: the player takes the black side (
 
 // ------------------------------------------------------------------ run state
 const slotsOf = run => 3 + lvl('slots') + (run.relics.includes('pockets') ? 1 : 0);
+// copies of a potion share a slot (up to its stack size); run.potions stays a flat list of ids, so old saves load as is
+function potionStacks(list) {
+  const out = [];
+  for (const id of list) { const s = out.find(x => x.id === id && x.n < D.STACK); if (s) s.n++; else out.push({ id, n: 1 }); }
+  return out;
+}
+const slotsUsed = run => potionStacks(run.potions).length;
+const canAddPotion = (run, id) => potionStacks(run.potions.concat(id)).length <= slotsOf(run);
 function newRun() {
   const army = { p: 5 + lvl('pawn'), n: lvl('knight') ? 1 : 0, b: lvl('bishop') ? 1 : 0, r: lvl('rook') ? 1 : 0, q: 0 };
   const relics = D.META.filter(u => u.amulet && lvl(u.id)).map(u => u.amulet);
@@ -104,11 +117,55 @@ function newRun() {
 }
 function addPotion(id) {
   const run = CS.run;
-  if (run.potions.length >= slotsOf(run)) {
+  if (!canAddPotion(run, id)) {
     const c = Math.floor(D.POTIONS[id].price / 2);
     run.coins += c; UI.toast(T('toast.bagFull', { c }), 'bad'); return false;
   }
   run.potions.push(id); return true;
+}
+// ------------------------------------------------------------------ veteran pieces
+// every piece of the army has a name and counts the won battles it survived. run.roster mirrors the
+// counts in run.army (old saves get a fresh roster). Names use Math.random: the daily run's seed is for maps.
+const medalOf = b => D.VET.medals.filter(x => b >= x).length;   // 0 none, 1 bronze, 2 silver, 3 gold
+const vetLabel = (k, v) => T('vet.name', { piece: T('piece.' + PIECE_NAME[k]), name: v.name });
+function syncRoster(run) {
+  const R = run.roster = run.roster || {}, used = new Set();
+  for (const k of D.PIECE_ORDER) for (const v of (R[k] || [])) used.add(v.name);
+  for (const k of D.PIECE_ORDER) {
+    const a = R[k] = R[k] || [];
+    while (a.length < run.army[k]) {
+      const free = D.VET.names.filter(n => !used.has(n)), pool = free.length ? free : D.VET.names;
+      const name = pool[Math.floor(Math.random() * pool.length)]; used.add(name); a.push({ name, b: 0 });
+    }
+    while (a.length > run.army[k]) {   // a piece left the army (events): the greenest one goes
+      let j = 0; a.forEach((v, i) => { if (v.b <= a[j].b) j = i; });
+      const gone = a.splice(j, 1)[0];
+      if (medalOf(gone.b)) UI.toast(T('vet.farewell', { name: vetLabel(k, gone), n: gone.b }), 'bad');
+    }
+  }
+}
+// who stands where at the start of a battle, for Match (cfg.ids)
+function vetIds(run, color) {
+  syncRoster(run);
+  const ids = new Array(64).fill(null);
+  for (const s of armySlots(run.army, color)) {
+    const v = run.roster[s.k][s.i];
+    ids[s.sq] = { k: s.k, i: s.i, medal: medalOf(v.b), name: vetLabel(s.k, v), label: vetLabel(s.k, v) + ' \u00b7 ' + T('vet.battles', { n: v.b }) };
+  }
+  return ids;
+}
+// after a won battle: survivors gain a battle, medals pay coins
+function rewardVets(run, m) {
+  if (!m.ids) return 0;
+  let coins = 0;
+  for (const id of m.ids) {
+    if (!id) continue;
+    const v = run.roster[id.k] && run.roster[id.k][id.i]; if (!v) continue;
+    const before = medalOf(v.b); v.b++;
+    const after = medalOf(v.b); coins += after;
+    if (after > before) UI.toast(T('vet.medal', { name: vetLabel(id.k, v), medal: T('vet.medals.' + after) }));
+  }
+  return coins;
 }
 function addRelic(id) {
   const run = CS.run;
@@ -207,7 +264,7 @@ function genMap(act) {
       const ids = Object.keys(EVENTS).filter(e => !usedEvents.has(e));
       n.eventId = pickOne(ids.length ? ids : Object.keys(EVENTS)); usedEvents.add(n.eventId);
     } else if (n.type === 'boss') {
-      n.diff = 'boss'; n.tc = 'blitz'; n.enemyId = BOSS[act]; n.objType = 'mate';
+      n.diff = 'boss'; n.tc = D.BOSS_ACT[act].tc; n.enemyId = BOSS[act]; n.objType = 'mate';
     }
   }));
   return { layers };
@@ -286,6 +343,8 @@ const btn = (label, fn, cls) => h('button', { class: 'btn ' + (cls || ''), oncli
 const icon = (shape, color, opts, cls) => h('img', { class: 'icon ' + (cls || ''), src: SP.iconURL(shape, color, opts) });
 const pieceImg = k => h('img', { class: 'pimg', src: SP.pieceURL(C.mk(D.TYPE[k], 0)) });
 const potionIcon = id => icon('potion', D.POTIONS[id].color, { glyph: D.POTIONS[id].glyph }, 'chip');
+const stackIcon = (id, n) => h('span', { class: 'pot' }, potionIcon(id), h('span', { class: 'pot-n' }, n));
+const potionDesc = id => T('item.' + id + '.desc') + ' ' + T('item.stack');
 const relicIcon = id => icon(D.RELICS[id].shape, D.RELICS[id].color, null, 'chip');
 const coinIcon = () => icon('coin', '#f0d060', null, 'coin');
 const KIND_COLOR = { piece: '#e8b84a', coins: '#f0d060', upgrade: '#b57cff' };
@@ -308,8 +367,8 @@ function runHeader() {
   const run = CS.run;
   const army = h('div', { class: 'army' }, h('img', { class: 'pimg', src: SP.pieceURL(C.mk(C.KING, 0)) }),
     D.PIECE_ORDER.filter(k => run.army[k] > 0).map(k => h('span', { class: 'armyitem', title: T('piece.' + PIECE_NAME[k]) }, pieceImg(k), '\u00d7' + run.army[k])));
-  const pots = h('div', { class: 'chips' }, run.potions.map(id => h('span', { title: T('item.' + id + '.name') + ': ' + T('item.' + id + '.desc') }, potionIcon(id))),
-    h('span', { class: 'muted small' }, '(' + run.potions.length + '/' + slotsOf(run) + ')'));
+  const pots = h('div', { class: 'chips' }, potionStacks(run.potions).map(s => h('span', { title: T('item.' + s.id + '.name') + ': ' + T('item.' + s.id + '.desc') }, stackIcon(s.id, s.n))),
+    h('span', { class: 'muted small' }, '(' + slotsUsed(run) + '/' + slotsOf(run) + ')'));
   const rel = h('div', { class: 'chips' }, run.relics.map(id => h('span', { title: T('relic.' + id + '.name') + ': ' + T('relic.' + id + '.desc') }, relicIcon(id))));
   return h('div', { class: 'run-header panel' },
     h('div', { class: 'stat' }, coinIcon(), h('b', null, run.coins)),
@@ -334,6 +393,7 @@ function unlock(id) {
   m.ach[id] = Date.now(); m.crowns += a.crowns; saveMeta();
   UI.toast(T('ach.unlocked', { name: T('ach.' + id + '.name'), c: a.crowns }), 'ach'); UI.sfx('promote');
 }
+const CAP_VAL = [0, 1, 3, 3, 5, 9, 0], TIER_RANK = { easy: 1, normal: 2, hard: 3, boss: 4 };
 function trackMatch(res, m, cfg, node) {
   const c = CS.meta.counts, mine = m.log.filter(l => l.mover === 'p');
   c.record = c.record || {};
@@ -342,6 +402,15 @@ function trackMatch(res, m, cfg, node) {
   if (queens) { c.queens += queens; if (c.queens >= 5) unlock('queenHunter'); }
   if (mine.some(l => l.san.includes('='))) unlock('promote');
   if (m.items.length < cfg.items.length) CS.run.usedPotion = true;
+  // run summary, shown when the run ends: toughest win, fastest mate, most valuable piece, potions drunk
+  const monster = D.ENEMIES.find(e => e.id === cfg.enemy.id), sum = CS.run.sum = CS.run.sum || { cap: {}, drunk: 0 };
+  sum.drunk += Math.max(0, cfg.items.length - m.items.length);
+  for (const l of mine) if (l.cap) { const k = 'NBRQK'.includes(l.san[0]) ? l.san[0].toLowerCase() : 'p'; sum.cap[k] = (sum.cap[k] || 0) + CAP_VAL[l.cap]; }
+  if (res.win && monster) {
+    const rank = (monster.act || 1) * 10 + TIER_RANK[monster.tier];
+    if (!sum.best || rank >= sum.best.rank) sum.best = { id: monster.id, rank };
+    if (res.reason === 'mate' && (!sum.fast || mine.length < sum.fast.n)) sum.fast = { id: monster.id, n: mine.length };
+  }
   if (res.win) {
     unlock('firstWin');
     if (node.type === 'scenario') { c.puzzles++; if (c.puzzles >= 5) unlock('puzzles'); }
@@ -520,28 +589,41 @@ function legend() {
   const items = [['duel', '#e8c84a'], ['scenario', NODE_COLOR.scenario], ['rush', NODE_COLOR.rush], ['arena', NODE_COLOR.arena], ['elite', NODE_COLOR.elite], ['shop', NODE_COLOR.shop], ['event', NODE_COLOR.event], ['rest', NODE_COLOR.rest], ['boss', NODE_COLOR.boss]];
   return h('div', { class: 'legend' }, items.map(([t, c]) => h('span', { class: 'legend-item' }, icon(t, c, null, 'chip'), T('node.' + t))));
 }
+// the three most seasoned pieces, under the miniboard
+function topVets(run) {
+  const all = [];
+  for (const k of D.PIECE_ORDER) (run.roster[k] || []).forEach(v => { if (v.b) all.push({ k, v }); });
+  all.sort((a, b) => b.v.b - a.v.b);
+  if (!all.length) return h('div', { class: 'muted small' }, T('vet.none'));
+  return h('div', { class: 'vets' }, all.slice(0, 3).map(({ k, v }) => h('div', { class: 'small vet' },
+    medalOf(v.b) ? h('span', { class: 'vmedal inline', style: { background: D.VET.colors[medalOf(v.b) - 1] } }) : null,
+    vetLabel(k, v) + ' \u00b7 ' + T('vet.battles', { n: v.b }))));
+}
 // "your side of the board": army on its starting squares, potion slots and relics
 function sidePanel() {
   const run = CS.run, b = new Array(64).fill(0);
-  placeArmy(b, run.army, 0);
+  placeArmy(b, run.army, 0); syncRoster(run);
+  const vets = vetIds(run, 0);
   const NAMES = { 1: 'pawn', 2: 'knight', 3: 'bishop', 4: 'rook', 5: 'queen', 6: 'king' };
   const squares = [];
   for (let r = 1; r >= 0; r--) for (let f = 0; f < 8; f++) {
     const p = b[r * 8 + f];
-    squares.push(h('div', { class: 'msq ' + ((f + r) & 1 ? 'l' : 'd') }, p ? h('img', { src: SP.pieceURL(p), title: T('piece.' + NAMES[p & 7]) }) : null));
+    const v = vets[r * 8 + f];
+    squares.push(h('div', { class: 'msq ' + ((f + r) & 1 ? 'l' : 'd') }, p ? h('img', { src: SP.pieceURL(p), title: v ? v.label : T('piece.' + NAMES[p & 7]) }) : null,
+      v && v.medal ? h('span', { class: 'vmedal', style: { background: D.VET.colors[v.medal - 1] } }) : null));
   }
-  const slots = [];
+  const slots = [], stacks = potionStacks(run.potions);
   for (let i = 0; i < slotsOf(run); i++) {
-    const id = run.potions[i];
-    slots.push(id ? h('div', { class: 'slot', title: T('item.' + id + '.desc') }, potionIcon(id), h('span', null, T('item.' + id + '.name')))
+    const s = stacks[i];
+    slots.push(s ? h('div', { class: 'slot', title: potionDesc(s.id) }, stackIcon(s.id, s.n), h('span', null, T('item.' + s.id + '.name')))
       : h('div', { class: 'slot empty' }, h('span', null, T('side.empty'))));
   }
   const rel = run.relics.length ? run.relics.map(id => h('div', { class: 'slot', title: T('relic.' + id + '.desc') }, relicIcon(id), h('span', null, T('relic.' + id + '.name'))))
     : [h('div', { class: 'muted small' }, T('side.none'))];
   return h('div', { class: 'side panel' },
     h('div', { class: 'side-col' }, h('div', { class: 'panel-title' }, T('side.army')), h('div', { class: 'miniboard' }, squares),
-      h('div', { class: 'muted small' }, T('side.value', { v: armyValue(run.army) }))),
-    h('div', { class: 'side-col' }, h('div', { class: 'panel-title' }, T('side.potions') + ' (' + run.potions.length + '/' + slotsOf(run) + ')'), h('div', { class: 'slots' }, slots)),
+      h('div', { class: 'muted small' }, T('side.value', { v: armyValue(run.army) })), topVets(run)),
+    h('div', { class: 'side-col' }, h('div', { class: 'panel-title' }, T('side.potions') + ' (' + slotsUsed(run) + '/' + slotsOf(run) + ')'), h('div', { class: 'slots' }, slots)),
     h('div', { class: 'side-col' }, h('div', { class: 'panel-title' }, T('side.relics')), h('div', { class: 'slots' }, rel)));
 }
 function showMap() {
@@ -642,9 +724,11 @@ function timeFor(baseSec, incSec) {
 // long clocks get calm music; only bullet games get the fast track
 const TC_MUSIC = { rapid: 'calm', blitz: 'battle', bullet: 'rush' };
 function startDuel(n) {
+  syncRoster(CS.run);
   const run = CS.run, df = D.DIFFS[n.diff], tc = D.TIMECTRL[n.tc], e = D.ENEMIES.find(x => x.id === n.enemyId);
   const pv = armyValue(run.army);
-  const bf = n.intro ? D.INTRO.budget : df.budget;
+  const ba = n.type === 'boss' ? D.BOSS_ACT[run.act || 1] : null;
+  const bf = n.intro ? D.INTRO.budget : ba ? ba.budget : df.budget;
   const budget = Math.max(2, Math.round(pv * bf[0] + bf[1]));
   const objType = (n.objType === 'captureQueen' && (budget < 12 || e.id === 'headless')) || (n.objType === 'promote' && !run.army.p) ? 'mate' : n.objType;
   const ea = buildEnemyArmy(budget, objType === 'captureQueen' || e.id === 'shadowking');   // trait: the Shadow King always fields a queen
@@ -653,10 +737,10 @@ function startDuel(n) {
   const pieces = D.PIECE_ORDER.reduce((t, k) => t + ea[k], 0);
   launchMatch({
     fen: setupFEN(run.army, ea, n.black), playerColor: n.black ? 1 : 0,
-    enemy: Object.assign({ id: e.id, style: e.style, tier: n.diff, thief: e.thief || 0, hourglass: e.hourglass || 0 }, n.intro ? { depth: D.INTRO.depth, blunder: D.INTRO.blunder } : {}),
+    enemy: Object.assign({ id: e.id, style: e.style, tier: n.diff, thief: e.thief || 0, hourglass: e.hourglass || 0 }, n.intro ? { depth: D.INTRO.depth, blunder: D.INTRO.blunder } : ba ? { depth: ba.depth, blunder: ba.blunder } : {}),
     objective: { type: objType, n: objType === 'capture' ? Math.min(objN(objType, n.diff), pieces) : objN(objType, n.diff) }, time: timeFor(tc.base, tc.inc),
     note: T('match.armyNote', { you: armyStr(run.army), foe: armyStr(ea) }) + (n.black ? ' ' + T('match.blackNote') : ''),
-    music: n.diff === 'boss' ? 'boss' : TC_MUSIC[n.tc],
+    music: n.diff === 'boss' ? 'boss' : TC_MUSIC[n.tc], ids: vetIds(run, n.black ? 1 : 0),
     onSteal: c => { const t = Math.min(c, run.coins); run.coins -= t; return t; },
   }, n);
 }
@@ -685,9 +769,12 @@ function onMatchEnd(res, m, cfg, node, snapshot) {
   trackMatch(res, m, cfg, node);
   if (res.win) {
     run.potions = m.items.slice();
-    const coins = coinReward(node.tc ? node : Object.assign({ tc: 'rapid' }, node));
+    const vet = rewardVets(run, m);
+    const coins = Math.round(coinReward(node.tc ? node : Object.assign({ tc: 'rapid' }, node)) * (m.midas ? 1.5 : 1)) + vet;
     run.coins += coins; run.stats.wins++; setPending('rewards', node);
-    m.showResult(T('result.win'), T('reason.' + res.reason) + '   +' + coins + ' ' + T('coins'),
+    // amulet: the alchemist brews a potion after a won battle now and then
+    if (run.relics.includes('alchemist') && Math.random() < 0.35) { const p = randomPotion(); if (addPotion(p)) UI.toast(T('toast.alchemist', { p: T('item.' + p + '.name') })); }
+    m.showResult(T('result.win'), T('reason.' + res.reason) + '   +' + coins + ' ' + T('coins') + (m.midas ? '  ' + T('result.midas') : '') + (vet ? '  ' + T('result.vets', { c: vet }) : ''),
       [{ label: T('result.continue'), cls: 'primary', onClick: () => {
         UI.sfx('coin'); CS.match.destroy(); CS.match = null; afterWin(node);
       } }], true);
@@ -816,7 +903,7 @@ function continueRun() {
 function rewardCard(o, onPick) {
   let ico, title, desc;
   if (o.kind === 'piece') { ico = pieceImg(o.k); title = T('piece.' + PIECE_NAME[o.k]); desc = T('reward.piece'); }
-  else if (o.kind === 'potion') { ico = potionIcon(o.id); title = T('item.' + o.id + '.name'); desc = T('item.' + o.id + '.desc'); }
+  else if (o.kind === 'potion') { ico = potionIcon(o.id); title = T('item.' + o.id + '.name'); desc = potionDesc(o.id); }
   else if (o.kind === 'relic') { ico = relicIcon(o.id); title = T('relic.' + o.id + '.name'); desc = T('relic.' + o.id + '.desc'); }
   else { ico = h('img', { class: 'icon', src: SP.iconURL('coin', '#f0d060') }); title = '+' + o.amount + ' ' + T('coins'); desc = ''; }
   const color = o.kind === 'potion' ? D.POTIONS[o.id].color : o.kind === 'relic' ? D.RELICS[o.id].color : null;
@@ -854,20 +941,24 @@ function makeStock(run) {
   return { potions: [0, 1, 2].map(() => ({ id: randomPotion() })), relic: rl.length ? { id: pickOne(rl) } : null, pieces: pieces.map(k => ({ k })) };
 }
 const rerollCost = k => (k ? 10 * k : 0);       // 1st reroll free, then 10, 20, 30...
+const shopPrice = (run, p) => Math.round(p * (run.relics.includes('merchant') ? 0.8 : 1));
 function showShop(n) {
   const run = CS.run;
   if (!n.stock) { n.stock = makeStock(run); n.rerolls = n.rerolls || 0; }
   const S = n.stock;
-  const buy = (entry, price, apply) => {
+  const buy = (entry, price, apply, restock) => {
     if (entry.sold || run.coins < price || !apply()) return;
-    run.coins -= price; entry.sold = true; UI.sfx('buy'); showShop(n);
+    run.coins -= price; if (!restock) entry.sold = true; UI.sfx('buy'); showShop(n);
   };
-  const shopCard = (entry, kind, color, ico, title, desc, price, apply) => card('div', kind, color, ico, title, desc,
-    entry.sold ? h('div', { class: 'tag' }, T('shop.sold')) : priceBtn(price, run.coins >= price, () => buy(entry, price, apply)),
-    entry.sold ? 'maxed' : (run.coins >= price ? 'buyable' : ''));
+  const shopCard = (entry, kind, color, ico, title, desc, base, apply, restock) => {
+    const price = shopPrice(run, base);
+    return card('div', kind, color, ico, title, desc,
+      entry.sold ? h('div', { class: 'tag' }, T('shop.sold')) : priceBtn(price, run.coins >= price, () => buy(entry, price, apply, restock)),
+      entry.sold ? 'maxed' : (run.coins >= price ? 'buyable' : ''));
+  };
   const cards = [];
-  for (const e of S.potions) cards.push(shopCard(e, 'potion', D.POTIONS[e.id].color, potionIcon(e.id), T('item.' + e.id + '.name'), T('item.' + e.id + '.desc'), D.POTIONS[e.id].price,
-    () => { if (run.potions.length >= slotsOf(run)) { UI.toast(T('shop.bagFull'), 'bad'); return false; } run.potions.push(e.id); return true; }));
+  for (const e of S.potions) cards.push(shopCard(e, 'potion', D.POTIONS[e.id].color, potionIcon(e.id), T('item.' + e.id + '.name'), potionDesc(e.id) + ' ' + T('shop.restock'), D.POTIONS[e.id].price,
+    () => { if (!canAddPotion(run, e.id)) { UI.toast(T('shop.bagFull'), 'bad'); return false; } run.potions.push(e.id); return true; }, true));
   if (S.relic) cards.push(shopCard(S.relic, 'relic', D.RELICS[S.relic.id].color, relicIcon(S.relic.id), T('relic.' + S.relic.id + '.name'), T('relic.' + S.relic.id + '.desc'), D.RELICS[S.relic.id].price, () => { addRelic(S.relic.id); return true; }));
   for (const e of S.pieces) cards.push(shopCard(e, 'piece', null, pieceImg(e.k), T('piece.' + PIECE_NAME[e.k]), T('reward.piece'), D.PRICE[e.k], () => { run.army[e.k]++; return true; }));
   const rc = rerollCost(n.rerolls), canReroll = run.coins >= rc;
@@ -906,6 +997,22 @@ function showRest(n) {
 }
 
 // ------------------------------------------------------------------ end of run
+function runSummary(run, victory) {
+  const sum = run.sum || { cap: {}, drunk: 0 }, rows = [];
+  const foe = id => h('span', { class: 'sum-foe' }, h('img', { class: 'sum-face', src: root.Portraits.url(id, 'idle'), alt: '' }), T('enemy.' + id + '.name'));
+  const row = (label, val) => rows.push(h('div', { class: 'drow' }, h('span', { class: 'muted' }, label), h('b', null, val)));
+  if (sum.best) row(T('end.bestWin'), foe(sum.best.id));
+  if (sum.fast) row(T('end.fastest'), T('end.fastestVal', { n: sum.fast.n, foe: T('enemy.' + sum.fast.id + '.name') }));
+  const mvp = Object.keys(sum.cap).sort((a, b) => sum.cap[b] - sum.cap[a])[0];
+  if (mvp) row(T('end.mvp'), h('span', { class: 'sum-foe' }, h('img', { class: 'pimg', src: SP.pieceURL(C.mk('pnbrqk'.indexOf(mvp) + 1, 0)), alt: '' }),
+    T('piece.' + ({ p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' })[mvp]) + ' · ' + T('end.mvpVal', { v: sum.cap[mvp] })));
+  row(T('end.drunk'), sum.drunk);
+  let best = null;
+  for (const k of D.PIECE_ORDER) for (const v of ((run.roster || {})[k] || [])) if (v.b && (!best || v.b > best.v.b)) best = { k, v };
+  if (best) row(T('end.vet'), vetLabel(best.k, best.v) + ' \u00b7 ' + T('vet.battles', { n: best.v.b }));
+  if (!victory && run.lastFoe && D.ENEMIES.some(e => e.id === run.lastFoe)) row(T('end.beatBy'), foe(run.lastFoe));
+  return h('div', { class: 'panel run-summary' }, h('div', { class: 'panel-title' }, T('end.summary')), rows);
+}
 function endRun(victory) {
   const run = CS.run, m = CS.meta;
   if (CS.match) { CS.match.destroy(); CS.match = null; }
@@ -921,10 +1028,12 @@ function endRun(victory) {
   UI.screen(h('div', { class: 'screen center-screen' },
     h('h1', { class: victory ? 'good' : 'bad' }, victory && (run.act || 1) >= D.ACTS ? T('end.final') : victory ? T('end.victory') : T('end.defeat')),
     h('p', null, victory && (run.act || 1) >= D.ACTS ? T('end.finalText') : victory ? T('end.victoryText') : T('end.defeatText')),
-    h('div', { class: 'panel' },
-      h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.nodes')), h('b', null, run.stats.nodes)),
-      h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.wins')), h('b', null, run.stats.wins)),
-      h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.crowns')), h('b', null, '+' + crowns))),
+    h('div', { class: 'row center end-panels' },
+      h('div', { class: 'panel' },
+        h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.nodes')), h('b', null, run.stats.nodes)),
+        h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.wins')), h('b', null, run.stats.wins)),
+        h('div', { class: 'drow' }, h('span', { class: 'muted' }, T('end.crowns')), h('b', null, '+' + crowns))),
+      runSummary(run, victory)),
     m.crowns >= cheapest ? h('p', { class: 'tip' }, T('end.canBuy')) : null,
     h('div', { class: 'menu' }, btn(T('title.shop') + '  (' + m.crowns + ' ' + T('crowns') + ')', showMetaShop, 'primary'), btn(T('end.again'), startRun), btn(T('end.title'), showTitle))));
 }
@@ -942,5 +1051,5 @@ function showSplash() {
     h('div', { class: 'version' }, T('title.version', { v: D.VERSION }))));
 }
 CS.init = function () { loadMeta(); if (UI.audioAvailable()) showSplash(); else showTitle(); };
-CS._test = { cavalry, showActClear, showBestiary, unlock, startDaily, seeded, setRand: f => { rand = f; }, continueRun, savedRun, genMap, buildEnemyArmy, setupFEN, newRun, armyValue, makeRewards, EVENTS, reachable };
+CS._test = { cavalry, showActClear, showBestiary, unlock, startDaily, seeded, setRand: f => { rand = f; }, continueRun, savedRun, genMap, buildEnemyArmy, setupFEN, newRun, armyValue, makeRewards, EVENTS, reachable, potionStacks, canAddPotion, showMap, endRun, startDuel, syncRoster, vetIds, rewardVets, shopPrice };
 })(window);

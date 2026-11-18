@@ -76,6 +76,22 @@ function structural() {
   ok(full.split(' ')[0] === C.START_FEN.split(' ')[0], 'a full army reproduces the standard start position');
   CS.meta = { crowns: 0, levels: {}, stats: { runs: 0, wins: 0, bestNodes: 0 } };
   CS.run = CS._test.newRun();
+  {   // potions of the same kind stack in one slot, up to their stack size
+    const st = CS._test.potionStacks(['hint', 'hint', 'rewind', 'hint', 'rewind', 'hint', 'hint', 'hint', 'hint']);
+    ok(st.length === 2 && st[0].n === 7 && st[1].n === 2, 'potions of the same kind stack in one slot without a practical limit');
+    const r = { potions: ['hint', 'hint', 'hint', 'hint', 'thief', 'freeze'], relics: [] };
+    ok(CS._test.canAddPotion(r, 'hint') && !CS._test.canAddPotion(r, 'rewind'), 'a full bag still takes a potion that fits an open stack');
+    ok(CS._test.shopPrice({ relics: ['merchant'] }, 100) === 80 && CS._test.shopPrice({ relics: [] }, 100) === 100, "merchant's ring: shop prices -20%");
+  }
+  {   // veteran pieces: a named roster mirrors the army; survivors of won battles earn medals that pay coins
+    const r = CS._test.newRun(); r.army = { p: 3, n: 1, b: 0, r: 0, q: 0 }; CS._test.syncRoster(r);
+    ok(r.roster.p.length === 3 && r.roster.n.length === 1 && new Set(r.roster.p.map(v => v.name)).size === 3, 'veterans: every piece gets its own name');
+    const ids = CS._test.vetIds(r, 0);
+    ok(ids.filter(Boolean).length === 4 && ids[8 + 3] && ids[8 + 3].k === 'p', 'veterans: each piece is placed on its starting square');
+    let pay = 0; for (let i = 0; i < 3; i++) pay = CS._test.rewardVets(r, { ids: CS._test.vetIds(r, 0) });
+    ok(r.roster.p[0].b === 3 && pay === 4, 'veterans: after 3 won battles every survivor wears a bronze medal and pays a coin');
+    r.army.p = 2; CS._test.syncRoster(r); ok(r.roster.p.length === 2, 'veterans: the roster shrinks when the army does');
+  }
   let badR = 0;
   for (let i = 0; i < 200; i++) for (const d of ['easy', 'normal', 'hard']) { const rs = CS._test.makeRewards(d); for (const o of rs) if (o.kind === 'piece' && CS.run.army[o.k] >= D.MAX_ARMY[o.k]) badR++; }
   ok(badR === 0, 'rewards never offer a piece beyond the standard army');
@@ -268,6 +284,14 @@ async function objectives() {
   m.doMove(m.legalMoves.find(x => C.sqName(C.mFrom(x)) === 'e8'), false); ok(m.clock[0] <= c0 - 4000, 'dragon trait: every 5th move burns 4 s of your clock'); m.destroy();
   m = mk2('shadowking', '4k3/8/8/8/8/8/3r4/3QK3 w - - 0 1'); m.scheduleAI = () => {};
   play(m, 'd1d2'); ok(m.phase2, 'Shadow King trait: below half health the eclipse begins'); m.destroy();
+  m = mk2('slime', '4k3/p3p3/8/8/8/8/8/4RK2 w - - 0 1', ['banish']); m.scheduleAI = () => {};
+  m.useItem('banish'); ok(m.banish && m.banish.length === 1 && m.banish[0] === 48, 'banishment: only pawns whose removal keeps the monster out of check');
+  m.onSquare(48); ok(!m.pos.board[48] && !m.items.length && m.log[m.log.length - 1].mover === 'x' && m.pos.turn === m.pc, 'banishment: the pawn vanishes and it is still your turn'); m.destroy();
+  m = mk2('slime', '4k3/8/8/8/8/8/8/4K3 w - - 0 1', ['haste', 'midas', 'midas']);
+  m.useItem('haste'); m.useItem('midas'); m.useItem('midas');
+  ok(m.inc[0] === 3000 && m.midas && m.items.length === 1, 'haste adds increment, one gold potion per battle'); m.destroy();
+  m = mk2('slime', '4k3/8/8/1q6/8/8/8/R3K3 w - - 0 1', ['foresight']); m.scheduleAI = () => {};
+  m.useItem('foresight'); await sleep(1500); ok(!!m.threatMove && !m.items.length, "foresight shows the monster's threat"); m.destroy();
   m = mk2('spider', '4k3/8/8/8/2b5/8/4P3/4K3 w - - 0 1'); m.scheduleAI = () => {}; const before = m.clock[0];
   play(m, 'e2e3'); ok(m.clock[0] <= before - 1000, 'spider trait: moving an attacked piece costs a second'); m.destroy();
   m = mk('4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1', { type: 'capture', n: 1 });

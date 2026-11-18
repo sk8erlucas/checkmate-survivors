@@ -7,7 +7,7 @@
 'use strict';
 const D = {};
 
-D.VERSION = '0.12.0';        // shown on the title screen (early alpha)
+D.VERSION = '0.14.0';        // shown on the title screen (early alpha)
 
 D.TYPE = { p: 1, n: 2, b: 3, r: 4, q: 5 };            // chess.js piece types
 D.MAX_ARMY = { p: 8, n: 2, b: 2, r: 2, q: 1 };         // never exceed a standard army
@@ -15,7 +15,9 @@ D.VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 D.PRICE = { p: 20, n: 45, b: 45, r: 70, q: 130 };
 D.PIECE_ORDER = ['p', 'n', 'b', 'r', 'q'];
 
-// consumables (potions): used during a match, they do not cost a move
+// consumables (potions): used during a match, they do not cost a move.
+// Copies of the same potion share one bag slot with no practical limit: a rich run should feel strong.
+D.STACK = 99;
 D.POTIONS = {
   rewind:    { color: '#4fa3e0', glyph: 'rewind',    price: 30, weight: 3 },
   hint:      { color: '#e8c84a', glyph: 'plus',      price: 25, weight: 4 },
@@ -23,6 +25,10 @@ D.POTIONS = {
   hourglass: { color: '#58c47a', glyph: 'hourglass', price: 20, weight: 5 },
   thief:     { color: '#9a5fd6', glyph: 'cross',     price: 35, weight: 3 },
   freeze:    { color: '#7fe0e8', glyph: 'snow',      price: 30, weight: 2 },
+  foresight: { color: '#ff8a5a', glyph: 'eye',       price: 20, weight: 4 },   // shows the monster's threat
+  haste:     { color: '#f0e070', glyph: 'haste',     price: 25, weight: 3 },   // +3 s increment for the battle
+  midas:     { color: '#ffc840', glyph: 'coin',      price: 25, weight: 3 },   // +50% coins if you win
+  banish:    { color: '#5a4a8a', glyph: 'skull',     price: 60, weight: 1 },   // removes one enemy pawn of your choice
 };
 
 // relics: passive for the rest of the run
@@ -34,15 +40,29 @@ D.RELICS = {
   charm:   { color: '#e87aa8', shape: 'heart',  price: 70 },
   iron:    { color: '#9aa0b0', shape: 'shield', price: 70 },
   feather: { color: '#f09050', shape: 'feather', price: 70 },
+  merchant:  { color: '#d8b060', shape: 'ring',    price: 70 },   // shop prices -20%
+  alchemist: { color: '#70d0a0', shape: 'flask',   price: 70 },   // 35% chance of a potion after each won battle
+  fang:      { color: '#e05070', shape: 'fang',    price: 70 },   // +2 s every time you capture
+  lantern:   { color: '#ffb050', shape: 'lantern', price: 70 },   // the Watchtower is always on
 };
+// veteran pieces: battles survived for each medal (bronze, silver, gold); each medal pays coins per won battle
+D.VET = { medals: [3, 6, 10], colors: ['#cd7f32', '#d0d8e8', '#ffd84a'],
+  names: ['Bruno', 'Lola', 'Tito', 'Mora', 'Nico', 'Pipa', 'Rulo', 'Coco', 'Luna', 'Toto', 'Fito', 'Kiki', 'Beto', 'Nina', 'Lucho', 'Mimi',
+    'Pancho', 'Rita', 'Chispa', 'Tano', 'Juana', 'Pepe', 'Uma', 'Gus', 'Olga', 'Rocco', 'Vera', 'Max', 'Ines', 'Hugo', 'Sol', 'Teo'] };
 
 // difficulty tiers (AI strength, pieces budget relative to the player, reward)
 D.DIFFS = {
   easy:   { coin: 1.0, depth: 1, blunder: 0.50, timeMs: 120, budget: [0.50, 0], color: '#6fcf7a' },
   normal: { coin: 1.5, depth: 2, blunder: 0.30, timeMs: 200, budget: [0.70, 0], color: '#e8c84a' },
   hard:   { coin: 2.2, depth: 3, blunder: 0.15, timeMs: 300, budget: [0.90, 1], color: '#e0524f' },
-  boss:   { coin: 4.0, depth: 4, blunder: 0.03, timeMs: 500, budget: [1.1, 2],  color: '#b57cff' },
+  boss:   { coin: 4.0, depth: 3, blunder: 0.05, timeMs: 400, budget: [1.0, 1],  color: '#b57cff' },
 };
+// each act's boss is a step up: the Lich is the first wall, not the last one (index = act)
+D.BOSS_ACT = [null,
+  { depth: 3, blunder: 0.15, budget: [0.8, 0],  tc: 'rapid' },
+  { depth: 3, blunder: 0.10, budget: [0.9, 0],  tc: 'rapid' },
+  { depth: 3, blunder: 0.05, budget: [1.0, 1],  tc: 'blitz' },
+];
 // the first steps of a run are warm-ups: weaker AI, smaller army, gentle objectives
 D.INTRO = { layers: 3, depth: 1, blunder: 0.6, budget: [0.4, 0] };
 D.TIMECTRL = {
@@ -68,7 +88,7 @@ D.ENEMIES = [
   { id: 'werewolf', style: 'aggressive', tier: 'hard', thief: 1 },
   { id: 'medusa',   style: 'positional', tier: 'hard' },
   { id: 'vampire',  style: 'balanced',   tier: 'hard', thief: 1 },
-  { id: 'lich',     style: 'balanced',   tier: 'boss', thief: 2, hourglass: 1 },
+  { id: 'lich',     style: 'balanced',   tier: 'boss', thief: 1, hourglass: 1 },
   // act 2: the Catacombs (act 1 hard monsters also roam here)
   { id: 'mummy',       style: 'defensive',  tier: 'normal', act: 2 },
   { id: 'banshee',     style: 'aggressive', tier: 'normal', act: 2 },
@@ -171,6 +191,10 @@ D.META = [
   { id: 'am_lucky',   amulet: 'lucky',   max: 1, cost: [80] },
   { id: 'am_eye',     amulet: 'eye',     max: 1, cost: [90] },
   { id: 'am_feather', amulet: 'feather', max: 1, cost: [120] },
+  { id: 'am_merchant',  amulet: 'merchant',  max: 1, cost: [70] },
+  { id: 'am_fang',      amulet: 'fang',      max: 1, cost: [80] },
+  { id: 'am_alchemist', amulet: 'alchemist', max: 1, cost: [100] },
+  { id: 'am_lantern',   amulet: 'lantern',   max: 1, cost: [110] },
 ];
 
 const api = D;

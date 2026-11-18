@@ -60,6 +60,7 @@ Packaging for itch.io: `package-itch.ps1` zips `index.html`, `css/` and `js/` in
 - **Map generation** runs in 4 phases (types, connections, no-repeat pass, details). Use the seedable helpers `rnd`/`chance`/`pickOne`/`weighted`/`shuffle` there, never `Math.random`, because the daily run seeds them by date.
 - **Achievements:** add to `D.ACHIEVEMENTS` plus `ach.<id>.name/desc` texts, and call `unlock('<id>')` from the moment that earns it (most checks are in `trackMatch`, `run.js`).
 - **Options** live in `meta.opts` and are applied by `applyOpts()`: `UI.reduced` (skip particles and shake) and `UI.classic` (no faction pieces). New visual effects must respect `UI.reduced`.
+- **Veteran pieces:** `run.roster` names each piece in the same order as `run.army` and `armySlots` (`run.js`). Call `syncRoster(run)` after anything that changes the army; battles pass `cfg.ids` so `Match` can follow each piece square by square.
 - **Amulets** are relics in code (`D.RELICS`, `relic.<id>.*` keys) but are called amulets in the UI. Permanent ones are `D.META` entries with an `amulet` field.
 - **Music:** tracks live in `TRACKS` (`ui.js`). Battles pick one from the clock (`TC_MUSIC` in `run.js`). Long games must stay calm: the author found fast music stressful there.
 - **Balance:** tune `D.DIFFS`, `D.INTRO`, `D.TIMECTRL`, `D.OBJ_N`, `D.META` costs and the Crowns formula in `endRun`. The author has asked three times for an easier game, so check that the opening steps stay gentle.

@@ -37,6 +37,7 @@ for (const id of ['cauldron', 'mirror', 'golem']) ['title', 'desc'].forEach(k =>
 ['cauldron.brew', 'cauldron.drink', 'cauldron.leave', 'cauldron.res.brewed', 'cauldron.res.drank', 'mirror.look', 'mirror.leave', 'mirror.res.copy', 'mirror.res.cursed', 'golem.pry', 'golem.sneak', 'golem.res.gem', 'golem.res.woke', 'golem.res.wokeCoins', 'golem.res.sneaked'].forEach(k => add('event.' + k));
 ['act.forest', 'act.crypt', 'act.castle', 'map.act2', 'map.act3', 'end.final', 'end.finalText', 'end.victoryText', 'end.defeatText', 'act.choice', 'act.choice2', 'kind.monster'].forEach(add);
 ['kraken', 'dragon', 'succubus', 'shadowking', 'mummy', 'golem', 'gargoyle', 'necromancer'].forEach(t => add('toast.trait.' + t));
+[1, 2, 3].forEach(i => add('vet.medals.' + i));
 let miss = 0;
 for (const lang of ['en', 'es']) for (const k of keys) if (I.DICT[lang][k] === undefined) { miss++; console.log('MISSING', lang, k); }
 // placeholders must match between languages

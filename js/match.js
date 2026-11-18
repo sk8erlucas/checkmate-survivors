@@ -25,6 +25,7 @@ function fmt(ms) {
 // Animated portrait beside the board: idle motion by playing style, blinks,
 // reacts to captures/checks, speaks, and shows the enemy material as HP.
 const PVAL = [0, 1, 3, 3, 5, 9, 0];
+const PNAME = [null, 'pawn', 'knight', 'bishop', 'rook', 'queen', 'king'];
 const IDLE = { rookie: 'fidget', greedy: 'sway', defensive: 'breathe', aggressive: 'bounce', positional: 'bob', balanced: 'bob' };
 const restartAnim = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
 function line(id, kind) { const opts = T('say.' + id + '.' + kind).split('|'); return opts[Math.floor(Math.random() * opts.length)]; }
@@ -117,6 +118,9 @@ class Match {
     this.faction = UI.classic ? null : SP.FACTIONS[this.enemy.id] ? this.enemy.id : 'rival';   // option: classic crimson pieces
     this.trait = D.ENEMIES.some(e => e.id === this.enemy.id) ? this.enemy.id : null;   // see TRAITS in docs
     this.hexed = null; this.petrified = false; this.howled = false; this.phase2 = false;
+    this.threatMove = null; this.banish = null; this.midas = false;
+    // veteran pieces: who stands on each of your squares (moves with them, cleared when captured)
+    this.ids = cfg.ids ? cfg.ids.slice() : null; this.idHist = [];
     this.legalMoves = this.pos.legal();
     this.result = null;
   }
@@ -129,6 +133,7 @@ class Match {
     this.ctx = e.canvas.getContext('2d');
     if (this.ctx) this.ctx.imageSmoothingEnabled = false;
     e.canvas.addEventListener('click', ev => this.onClick(ev));
+    e.canvas.addEventListener('mousemove', ev => { const sq = this.sqAt(ev), v = sq >= 0 && this.ids && this.ids[sq]; e.canvas.title = v ? v.label : ''; });
     e.enemyClock = h('div', { class: 'clock' }); e.playerClock = h('div', { class: 'clock' });
     e.capTop = h('div', { class: 'captured' }); e.capBottom = h('div', { class: 'captured' });
     e.think = h('span', { class: 'think' });
@@ -200,6 +205,7 @@ class Match {
       UI.toast(T('toast.trait.witch', { p: T('item.' + this.hexed + '.name') }), 'bad'); UI.sfx('hex'); this.avatar.taunt(false);
     }
     this.updateHud();
+    if (this.relics.includes('lantern')) this.markThreats();
     if (this.pos.turn === this.ec) this.scheduleAI();
   }
 
@@ -239,17 +245,22 @@ class Match {
   }
 
   // ---------------------------------------------------------------- input
-  onClick(ev) {
-    if (!this.started || this.over || this.thinking || this.paused || this.pos.turn !== this.pc) return;
+  sqAt(ev) {
     const rect = this.el.canvas.getBoundingClientRect();
     const x = (ev.clientX - rect.left) * (512 / rect.width), y = (ev.clientY - rect.top) * (512 / rect.height);
     const col = Math.floor(x / SQ), row = Math.floor(y / SQ);
-    if (col < 0 || col > 7 || row < 0 || row > 7) return;
+    if (col < 0 || col > 7 || row < 0 || row > 7) return -1;
     const f = this.flip ? 7 - col : col, r = this.flip ? row : 7 - row;
-    this.onSquare(r * 8 + f);
+    return r * 8 + f;
+  }
+  onClick(ev) {
+    if (!this.started || this.over || this.thinking || this.paused || this.pos.turn !== this.pc) return;
+    const sq = this.sqAt(ev);
+    if (sq >= 0) this.onSquare(sq);
   }
   onSquare(sq) {
     const p = this.pos.board[sq];
+    if (this.banish) { if (this.banish.includes(sq)) this.doBanish(sq); else { this.banish = null; UI.toast(T('toast.banishCancel')); } return; }
     if (this.selected >= 0 && this.targets && this.targets.has(sq)) {
       const ms = this.targets.get(sq);
       if (ms.length > 1) this.askPromo(ms); else this.playerMove(ms[0]);
@@ -272,7 +283,7 @@ class Match {
     });
     this.setOverlay(h('div', { class: 'overlay-card' }, h('h3', null, T('match.promote')), h('div', { class: 'row center' }, btns)));
   }
-  playerMove(m) { this.hintMove = null; this.threatSqs = null; this.doMove(m, true); }
+  playerMove(m) { this.hintMove = null; this.threatSqs = null; this.threatMove = null; this.doMove(m, true); }
   resign() {
     if (this.over || !this.started) return;
     if (!root.confirm(T('match.confirmResign'))) return;
@@ -288,12 +299,19 @@ class Match {
     const captured = capSq >= 0 ? this.pos.board[capSq] : 0, capType = captured & 7;
     const san = this.pos.san(m);
     const webbed = byPlayer && this.trait === 'spider' && this.pos.isAttacked(from, this.ec);
+    if (this.ids) {
+      const ids = this.ids; this.idHist.push(ids.slice());
+      if (capSq >= 0 && ids[capSq]) { if (ids[capSq].medal) UI.toast(T('vet.fell', { name: ids[capSq].name }), 'bad'); ids[capSq] = null; }
+      ids[to] = ids[from]; ids[from] = null;
+      if (fl & C.F_CASTLE) { const r = to & 56, ks = (to & 7) === 6, rf = r + (ks ? 7 : 0), rt = r + (ks ? 5 : 3); ids[rt] = ids[rf]; ids[rf] = null; }
+    }
     this.pos.make(m);
     this.log.push({ san, mover: byPlayer ? 'p' : 'e', cap: capType, from, to, m });
     const who = byPlayer ? this.pc : this.ec;
     this.clock[who] += this.inc[who];
     if (byPlayer) { this.playerMoves++; this.petrified = false; } else { this.enemyMoves++; this.frozen = false; }
     if (!byPlayer && this.trait === 'dragon' && this.enemyMoves % 5 === 0) this.breathe();
+    if (byPlayer && captured && this.relics.includes('fang')) { this.clock[this.pc] += 2000; this.floatText(to, '+2s', '#ff8aa0'); }
     if (webbed) { this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 1000); this.floatText(to, '-1s', '#c8a0ff'); if (!this.webTold) { this.webTold = true; UI.toast(T('toast.trait.spider'), 'bad'); } }
     this.lastMove = { from, to };
     const t0 = performance.now();
@@ -386,6 +404,7 @@ class Match {
     } else if (o.type === 'survive' && this.playerMoves >= o.n) res = { win: true, reason: 'survived' };
     this.updateHud();
     if (res) { this.finish(res); return; }
+    if (this.relics.includes('lantern')) this.markThreats();   // the lantern keeps the Watchtower on
     if (this.pos.turn === this.ec) this.scheduleAI();
   }
   captures() { return this.log.filter(l => l.mover === 'p' && l.cap).length; }
@@ -424,7 +443,8 @@ class Match {
     const idx = this.items.indexOf(id);
     const useFree = id === 'hint' && free && this.freeHints > 0;
     if (!useFree && idx < 0) return;
-    if (id === this.hexed && !useFree) { UI.toast(T('toast.hexed'), 'bad'); UI.sfx('hex'); return; }
+    // the witch's hex locks one copy: with a stack you can still drink the others
+    if (id === this.hexed && !useFree && this.items.filter(x => x === id).length < 2) { UI.toast(T('toast.hexed'), 'bad'); UI.sfx('hex'); return; }
     if (this.trait === 'gargoyle' && !this.taxed) { this.taxed = true; this.clock[this.pc] = Math.max(1000, this.clock[this.pc] - 5000); UI.toast(T('toast.trait.gargoyle'), 'bad'); }
     const consume = () => { if (useFree) this.freeHints--; else this.items.splice(this.items.indexOf(id), 1); };
     switch (id) {
@@ -432,10 +452,12 @@ class Match {
         const n = this.log.length;
         if (n < 2 || this.log[n - 1].mover !== 'e' || this.log[n - 2].mover !== 'p') { UI.toast(T('toast.noRewind'), 'bad'); return; }
         this.pos.unmake(); this.pos.unmake(); this.log.pop(); this.log.pop();
+        if (this.ids) { this.idHist.pop(); this.ids = this.idHist.pop(); }
         this.playerMoves--; this.enemyMoves--;
         const prev = this.log[this.log.length - 1];
         this.lastMove = prev ? { from: prev.from, to: prev.to } : null;
-        this.legalMoves = this.pos.legal(); this.selected = -1; this.targets = null; this.hintMove = null; this.threatSqs = null; this.anim = null; this.anim2 = null; this.fx = [];
+        this.legalMoves = this.pos.legal(); this.selected = -1; this.targets = null; this.hintMove = null; this.threatSqs = null; this.threatMove = null; this.anim = null; this.anim2 = null; this.fx = [];
+        if (this.relics.includes('lantern')) this.markThreats();
         break;
       }
       case 'hint': {
@@ -446,19 +468,38 @@ class Match {
           const r = AI.hint(this.pos);
           this.hintMove = r ? r.move : null;
           this.paused = false; this.last = performance.now(); this.updateHud();
+          // a full tip: arrow and squares on the board, plus the move in words ("Knight to f3")
+          if (r) UI.toast(T('toast.hintMove', { piece: T('piece.' + PNAME[this.pos.board[C.mFrom(r.move)] & 7]), sq: C.sqName(C.mTo(r.move)), san: this.pos.san(r.move) }));
         }, 30);
         UI.sfx('potion'); UI.toast(T('toast.potion.hint'));
         return;
       }
-      case 'threats': {
-        const mine = [], theirs = [], b = this.pos.board;
-        for (let s = 0; s < 64; s++) {
-          const p = b[s]; if (!p) continue;
-          if ((p >> 3) === this.pc) { if (this.pos.isAttacked(s, this.ec)) mine.push(s); } else if (this.pos.isAttacked(s, this.pc)) theirs.push(s);
-        }
-        this.threatSqs = { mine, theirs };
-        break;
+      case 'foresight': {
+        // what the monster would play if it were its turn now: flip the side to move and ask the AI
+        if (this.pos.inCheck()) { UI.toast(T('toast.noForesight'), 'bad'); return; }
+        const parts = this.pos.toFEN().split(' '); parts[1] = this.ec === C.WHITE ? 'w' : 'b'; parts[3] = '-';
+        const p2 = C.Position.fromFEN(parts.join(' '));
+        consume(); this.paused = true; this.updateHud();
+        setTimeout(() => {
+          if (this.destroyed) return;
+          const r = p2.legal().length ? AI.choose(p2, { depth: 4, timeMs: 500, style: this.enemy.style, blunder: 0 }) : null;
+          this.threatMove = r ? r.move : null;
+          this.paused = false; this.last = performance.now(); this.updateHud();
+          if (r) UI.toast(T('toast.foresightMove', { san: p2.san(r.move) }), 'bad');
+        }, 30);
+        UI.sfx('potion'); UI.toast(T('toast.potion.foresight'));
+        return;
       }
+      case 'banish': {
+        const ok = this.banishable();
+        if (!ok.length) { UI.toast(T('toast.noBanish'), 'bad'); return; }
+        this.banish = ok; this.selected = -1; this.targets = null;
+        UI.toast(T('toast.banishPick')); UI.sfx('click');
+        return;   // drunk when you pick the pawn (doBanish)
+      }
+      case 'haste': this.inc[this.pc] += 3000; break;
+      case 'midas': if (this.midas) { UI.toast(T('toast.midasDone'), 'bad'); return; } this.midas = true; break;
+      case 'threats': this.markThreats(); break;
       case 'hourglass': this.clock[this.pc] += 15000; break;
       case 'thief': { const amt = Math.min(10000, Math.max(0, this.clock[this.ec] - 1000)); this.clock[this.ec] -= amt; this.clock[this.pc] += amt; break; }
       case 'freeze': this.frozen = true; break;
@@ -469,11 +510,43 @@ class Match {
     this.updateHud();
   }
 
+  markThreats() {
+    const mine = [], theirs = [], b = this.pos.board;
+    for (let s = 0; s < 64; s++) {
+      const p = b[s]; if (!p) continue;
+      if ((p >> 3) === this.pc) { if (this.pos.isAttacked(s, this.ec)) mine.push(s); } else if (this.pos.isAttacked(s, this.pc)) theirs.push(s);
+    }
+    this.threatSqs = { mine, theirs };
+  }
+  // enemy pawns the Banishment potion may take: never one whose removal leaves the monster's king in check
+  banishable() {
+    const b = this.pos.board, out = [], pawn = C.mk(C.PAWN, this.ec);
+    for (let s = 0; s < 64; s++) {
+      if (b[s] !== pawn) continue;
+      b[s] = 0; const bad = this.pos.isAttacked(this.pos.kingSq[this.ec], this.pc); b[s] = pawn;
+      if (!bad) out.push(s);
+    }
+    return out;
+  }
+  doBanish(sq) {
+    this.banish = null;
+    const idx = this.items.indexOf('banish'); if (idx < 0) return;
+    this.items.splice(idx, 1);
+    const p = this.pos.board[sq];
+    // not a move: the pawn just vanishes. The log entry blocks Rewind past it and lets the review replay it.
+    this.pos.board[sq] = 0; this.pos.halfmove = 0; this.pos._computeHash(); this.pos.keys = [this.pos.key()];
+    this.log.push({ san: '\u2620' + C.sqName(sq), mover: 'x', cap: 0, from: sq, to: sq, banish: sq });
+    this.legalMoves = this.pos.legal(); this.hintMove = null; this.threatMove = null;
+    if (this.threatSqs) this.markThreats();
+    this.boom(sq, p, 1); UI.sfx('potion'); UI.toast(T('toast.potion.banish'));
+    this.updateHud();
+  }
+
   // ---------------------------------------------------------------- end
   finish(res) {
     if (this.over) return;
     this.over = true; this.thinking = false; this.result = res;
-    this.hintMove = null; this.threatSqs = null;
+    this.hintMove = null; this.threatSqs = null; this.threatMove = null; this.banish = null;
     UI.music(null); UI.sfx(res.win ? 'win' : 'lose');
     if (res.reason === 'mate' || res.reason === 'mated') {
       const k = this.pos.kingSq[res.win ? this.ec : this.pc];
@@ -512,6 +585,7 @@ class Match {
       const t0 = performance.now();
       while (i < log.length && performance.now() - t0 < 40) {
         const l = log[i++];
+        if (l.banish != null) { pos.board[l.banish] = 0; pos._computeHash(); continue; }
         if (l.mover === 'p') {
           n++;
           const best = pos.legal().length > 1 ? AI.choose(pos, opts) : null;
@@ -584,13 +658,13 @@ class Match {
     if (!list.length) e.items.appendChild(h('div', { class: 'muted small' }, T('match.noPotions')));
     const can = this.canUseItems();
     for (const it of list) {
-      const P = D.POTIONS[it.id];
+      const P = D.POTIONS[it.id], hex = it.id === this.hexed && !it.free, left = it.n - (hex ? 1 : 0);   // how many you can still drink
       e.items.appendChild(h('button', {
-        class: 'item' + (can ? '' : ' disabled') + (it.id === this.hexed && !it.free ? ' hexed' : ''), title: T('item.' + it.id + '.name') + ': ' + T('item.' + it.id + '.desc'),
+        class: 'item' + (can ? '' : ' disabled') + (hex && !left ? ' hexed' : ''), title: T('item.' + it.id + '.name') + ': ' + T('item.' + it.id + '.desc'),
         onclick: () => this.useItem(it.id, it.free),
-      }, h('img', { src: SP.iconURL('potion', P.color, { glyph: P.glyph }) }),
+      }, h('span', { class: 'pot' }, h('img', { src: SP.iconURL('potion', P.color, { glyph: P.glyph }) }), h('span', { class: 'pot-n' + (left ? '' : ' zero') }, left)),
         h('span', { class: 'item-name' }, T('item.' + it.id + '.name')),
-        it.id === this.hexed && !it.free ? h('span', { class: 'badge hex' }, T('match.hexed')) : it.n > 1 ? h('span', { class: 'badge' }, it.n) : null, it.free ? h('span', { class: 'badge free' }, T('match.free')) : null));
+        hex ? h('span', { class: 'badge hex' }, T('match.hexed')) : null, it.free ? h('span', { class: 'badge free' }, T('match.free')) : null));
     }
     this.updateClocks();
   }
@@ -691,6 +765,8 @@ class Match {
     if (this.lastMove && !this.reviewPos) { fillSq(this.lastMove.from, COL.last); fillSq(this.lastMove.to, COL.last); }
     if (this.threatSqs) { this.threatSqs.mine.forEach(s => fillSq(s, COL.threatMine)); this.threatSqs.theirs.forEach(s => fillSq(s, COL.threatTheirs)); }
     if (this.selected >= 0) fillSq(this.selected, COL.sel);
+    if (this.hintMove && !this.reviewPos) { fillSq(C.mFrom(this.hintMove), 'rgba(232,184,74,0.45)'); fillSq(C.mTo(this.hintMove), 'rgba(232,184,74,0.45)'); }
+    if (this.banish) this.banish.forEach(s => fillSq(s, 'rgba(154,95,214,0.6)'));
     if (!this.over && P.inCheck()) {
       const [x, y] = this.xy(P.kingSq[P.turn]);
       const g = ctx.createRadialGradient(x + 32, y + 32, 4, x + 32, y + 32, 34);
@@ -708,6 +784,11 @@ class Match {
         const k = Math.min(1, (now - this.fall.t0) / 500), ease = 1 - (1 - k) * (1 - k);
         ctx.save(); ctx.translate(x + 50, y + 58); ctx.rotate(ease * 1.45); this.drawPiece(ctx, p, -50, -58); ctx.restore();
       } else this.drawPiece(ctx, p, x, y);
+      const v = !this.reviewPos && this.ids && this.ids[sq];
+      if (v && v.medal) {   // veteran medal in the corner of the square
+        ctx.fillStyle = '#1a1022'; ctx.beginPath(); ctx.arc(x + 54, y + 10, 7, 0, 6.3); ctx.fill();
+        ctx.fillStyle = D.VET.colors[v.medal - 1]; ctx.beginPath(); ctx.arc(x + 54, y + 10, 5, 0, 6.3); ctx.fill();
+      }
     }
     for (const a of [anim, anim2]) {
       if (!a) continue;
@@ -723,6 +804,7 @@ class Match {
       }
     }
     if (this.hintMove) this.arrow(ctx, C.mFrom(this.hintMove), C.mTo(this.hintMove), 'rgba(232,184,74,0.9)');
+    if (this.threatMove && !this.reviewPos) this.arrow(ctx, C.mFrom(this.threatMove), C.mTo(this.threatMove), 'rgba(224,82,79,0.85)');
     if (this.reviewArrows && this.reviewPos) for (const a of this.reviewArrows) this.arrow(ctx, a.from, a.to, a.c);
     this.drawFx(ctx, now);
   }

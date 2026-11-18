@@ -151,6 +151,19 @@ h1, h2, h3 { margin: 0.3em 0; letter-spacing: 1px; }
 .item img { width: 32px; height: 32px; } .item-name { font-size: 13px; font-weight: bold; }
 .badge { position: absolute; right: 6px; top: 4px; background: var(--gold); color: #1a1322; border-radius: 10px; font-size: 11px; font-weight: bold; padding: 0 6px; }
 .badge.free { background: var(--good); }
+/* potion stacks: how many are left, under the bottle */
+.pot { position: relative; display: inline-flex; flex: none; }
+.pot-n { position: absolute; right: -4px; bottom: -3px; min-width: 9px; padding: 0 3px; background: #1a1322; color: var(--gold); border: 1px solid var(--gold); border-radius: 7px; font-size: 10px; font-weight: bold; line-height: 12px; text-align: center; }
+.pot-n.zero { color: var(--muted); border-color: var(--muted); }
+.slot-cap { margin-left: auto; }
+/* end of run: stats next to the run summary */
+.end-panels { align-items: flex-start; gap: 16px; }
+.run-summary { min-width: 360px; }
+.run-summary .drow, .end-panels .drow { align-items: center; }
+.item .pot-n { font-size: 11px; line-height: 13px; }
+.sum-foe { display: inline-flex; align-items: center; gap: 6px; }
+.sum-face { width: 32px; height: 32px; image-rendering: pixelated; }
+.sum-foe .pimg { width: 26px; height: 26px; }
 .relics { display: flex; gap: 6px; flex-wrap: wrap; } .relic { width: 32px; height: 32px; }
 
 /* opponent avatar */
@@ -284,3 +297,9 @@ h1.rush-title { font-size: 36px; }
 .mapwrap.act3 { border-color: #8a6ac8; background: radial-gradient(ellipse at center, rgba(181,124,255,.08) 0%, transparent 45%, rgba(8,4,14,.8) 100%), repeating-linear-gradient(0deg, #2a2236 0 26px, #1c1626 26px 28px), repeating-linear-gradient(90deg, transparent 0 54px, #1c1626 54px 56px); }
 .mapwrap.act3 .edges path.walked { stroke: #c89aff; }
 .rush-two { color: var(--gold); font-size: .7em; }
+/* veteran pieces: medal dots on the miniboard and the list under it */
+.msq { position: relative; }
+.vmedal { position: absolute; top: 1px; right: 1px; width: 11px; height: 11px; border-radius: 50%; border: 1px solid #1a1022; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.vmedal.inline { position: static; display: inline-block; vertical-align: middle; margin-right: 4px; }
+.vets { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.mv.x { color: #c89aff; }

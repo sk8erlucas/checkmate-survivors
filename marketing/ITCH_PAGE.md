@@ -15,7 +15,7 @@ Everything you need to fill in the itch.io "Create new project" form. Copy each 
 | **Short description or tagline** | Real chess, roguelite runs, and a cast of monsters. Start with a king and a few pawns, and survive. |
 | **Classification** | Games |
 | **Kind of project** | HTML |
-| **Release status** | In development (early alpha, v0.12.0) |
+| **Release status** | In development (early alpha, v0.14.0) |
 | **Pricing** | No payments (or "Donate" if you want tips) |
 | **Uploads** | `dist/checkmate-survivors-html5.zip`, and tick **"This file will be played in the browser"** |
 | **Viewport dimensions** | **1280 × 720** (the game's fixed reference resolution; it scales to any window and letterboxes). Tick **Fullscreen button** (there is also an in-game Fullscreen button). Leave "Mobile friendly" off for now. |
@@ -60,7 +60,8 @@ The rules of chess never change: real moves, castling, en passant and promotion.
 - **Elite monsters**: optional tough fights that always offer an amulet.
 - **Daily run**: the same map for everyone, every day.
 - **21 achievements** that pay Crowns, and options for sound and music volume, reduced animations and classic enemy pieces.
-- **Potions and amulets**: rewind, oracle hints, threat vision, time thief, and more. Reroll the shop when you don't like the offer (the first reroll is free).
+- **Potions and amulets**: rewind, oracle hints, threat vision, time thief, foresight, banishment and more. Potions stack without limit and never sell out in the shop: a rich run is a strong run.
+- **Veteran pieces**: every piece has a name. Survive won battles to earn bronze, silver and gold medals that pay coins. Reroll the shop when you don't like the offer (the first reroll is free).
 - **Permanent upgrades and an amulet collection**: earn Crowns every run, unlock lives, extra pawns and starting pieces, and buy amulets once to start every run with them.
 - **A gentle start**: the first steps are warm-up battles against weak monsters with simple goals.
 - **Auto-save**: close the tab and continue your run later.
@@ -117,7 +118,11 @@ Las reglas del ajedrez nunca cambian: movimientos reales, enroque, captura al pa
 
 ## Devlog post (optional, for launch)
 
-> **Checkmate Survivors v0.12.0 is out!** Act 3 is here: climb to the Castle after the Catacombs. Four new monsters (a headless knight who only plays knights and rooks, a succubus who steals your potions, a moat kraken and a young dragon who breathes fire on your clock) and the final boss, the Shadow King. Mate Rush serves mates in two in the Castle, and every act has its own music. v0.11 also added a post-battle review, duels with Black, a bestiary and volume sliders.
+> **Checkmate Survivors v0.14.0 is out!** Your pieces have names now: survive battles to earn medals. Four new potions (Foresight shows the monster's threat, Banishment removes an enemy pawn, plus Haste and Gold), four new amulets, unlimited potion stacks and a full move from the Oracle Eye.
+
+> *(v0.13.0)* **Checkmate Survivors v0.13.0 is out!** The bosses are gentler, especially the Hourglass Lich, and get tougher act by act. Potions of the same kind now stack in one bag slot with a counter, and the end of a run shows a summary: your toughest win, fastest mate, most valuable piece and who beat you.
+
+> *(v0.12.0)* **Checkmate Survivors v0.12.0 is out!** Act 3 is here: climb to the Castle after the Catacombs. Four new monsters (a headless knight who only plays knights and rooks, a succubus who steals your potions, a moat kraken and a young dragon who breathes fire on your clock) and the final boss, the Shadow King. Mate Rush serves mates in two in the Castle, and every act has its own music. v0.11 also added a post-battle review, duels with Black, a bestiary and volume sliders.
 
 > *(v0.10.0)* **Checkmate Survivors v0.10.0 is out!** Act 2 is here: descend into the Catacombs after beating the Lich. Four new monsters (Mummy, Banshee, Golem, Gargoyle), each with its own pieces and trait, and a new boss: the Necromancer.
 
